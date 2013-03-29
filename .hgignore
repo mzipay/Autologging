@@ -1,0 +1,17 @@
+syntax: glob
+.project
+.pydevproject
+MANIFEST
+*.pyc
+*.pyo
+*.log
+*.bak
+
+syntax: regexp
+^\.settings$
+^__pycache__$
+^Autologging.egg-info$
+^build$
+^dist$
+^doc/build$
+
