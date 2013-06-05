@@ -30,6 +30,12 @@ In a module *my_module.py*::
    @logged
    class MyClass(metaclass=TracedMethods("my_classmethod", "my_method")):
 
+      @logged
+      class Inner:
+
+         def my_inner_method(self):
+            self.__logger.info("info message from a NON-traced inner class method")
+
       @staticmethod
       def my_staticmethod():
          MyClass.__logger.info("info message from a NON-traced static method")
@@ -54,6 +60,7 @@ methods above (in their defined order) would produce the following log output::
    TRACE:my_module:CALL my_function *() **{}
    DEBUG:my_module:debug message from a traced function
    TRACE:my_module:RETURN my_function None
+   INFO:my_module.MyClass.Inner:info message from a NON-traced inner class method")
    INFO:my_module.MyClass:info message from a NON-traced static method
    TRACE:my_module.MyClass:CALL MyClass.my_classmethod *() **{}
    WARNING:my_module.MyClass:warning message from a traced class method
@@ -85,6 +92,12 @@ In a module *my_module.py*::
    class MyClass(
          metaclass=TracedMethods(_tracer, "my_classmethod", "my_method")):
 
+      @logged(_logger)
+      class Inner:
+
+         def my_inner_method(self):
+            self.__logger.info("info message from a NON-traced inner class method")
+
       @staticmethod
       def my_staticmethod():
          MyClass.__logger.info("info message from a NON-traced static method")
@@ -109,6 +122,7 @@ methods above (in their defined order) would produce the following log output::
    TRACE:myapp.tracing:CALL my_function *() **{}
    DEBUG:myapp:debug message from a traced function
    TRACE:myapp.tracing:RETURN my_function None
+   INFO:myapp.MyClass.Inner:info message from a NON-traced inner class method
    INFO:myapp.MyClass:info message from a NON-traced static method
    TRACE:myapp.tracing.MyClass:CALL MyClass.my_classmethod *() **{}
    WARNING:myapp.MyClass:warning message from a traced class method

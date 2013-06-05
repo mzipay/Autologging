@@ -26,7 +26,7 @@
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.1"
+__version__ = "0.2"
 
 import logging
 
@@ -74,3 +74,20 @@ class NamedLoggerClass(object):
     def logged_instancemethod(self):
         """NamedLoggerClass instance method."""
         self.__logger.info("NamedLoggerClass.logged_instancemethod test.")
+
+
+class OuterClass(object):
+    """Test a logged inner class."""
+
+    @logged
+    class InnerClass(object):
+        pass
+
+
+@logged
+class _InternalClass(object):
+    """Test an internal-named class and inner class."""
+
+    @logged
+    class _InnerInternalClass(object):
+        pass

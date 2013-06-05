@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.1"
+__version__ = "0.2"
 
 from functools import wraps
 import logging
@@ -90,18 +90,32 @@ def logged(obj):
     if (isinstance(obj, logging.Logger)):
         # decorated as `@logged(logger)' - use logger as parent
         def logged_decorator(class_):
-            logger = logging.getLogger("%s.%s" % (obj.name, class_.__name__))
-            setattr(class_, "_%s__logger" % class_.__name__, logger)
-            #class_.__logger = logging.getLogger("%s.%s" % (obj.name,
-            #                                               class_.__name__))
+            if (hasattr(class_, "__qualname__")):
+                logger_name = class_.__qualname__
+            else:
+                logger_name = class_.__name__
+            logger = logging.getLogger("%s.%s" % (obj.name, logger_name))
+            # removed leading underscores before creating the obfuscated
+            # class member variable name 
+            i = 0
+            while (class_.__name__[i] == '_'):
+                i += 1
+            setattr(class_, "_%s__logger" % class_.__name__[i:], logger)
             return class_
         return logged_decorator
     else:
         # decorated as `@logged' - use module logger as parent
-        logger = logging.getLogger("%s.%s" % (obj.__module__, obj.__name__))
-        setattr(obj, "_%s__logger" % obj.__name__, logger)
-        #obj.__logger = logging.getLogger("%s.%s" % (obj.__module__,
-        #                                            obj.__name__))
+        if (hasattr(obj, "__qualname__")):
+            logger_name = obj.__qualname__
+        else:
+            logger_name = obj.__name__
+        logger = logging.getLogger("%s.%s" % (obj.__module__, logger_name))
+        # removed leading underscores before creating the obfuscated class
+        # member variable name 
+        i = 0
+        while (obj.__name__[i] == '_'):
+            i += 1
+        setattr(obj, "_%s__logger" % obj.__name__[i:], logger)
         return obj
 
 
