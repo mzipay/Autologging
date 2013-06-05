@@ -105,6 +105,18 @@ A module that employs the use of ``autologging`` resembles the following::
       def my_instancemethod(self):
          self.__logger.debug("I am an instance method.")
 
+.. versionchanged:: 0.2
+   Inner classes and "internal" classes (i.e. classes named with leading
+   underscore) are now handled correctly.
+
+A module that uses ``autologging`` for inner classes resembles the following::
+
+   class Outer:
+
+      @logged
+      class _Inner:
+         """Logger name will be '<modulename>.Outer._Inner'."""
+
 Please see :doc:`autologging` for details, then check out :doc:`examples`.
 
 Indices and tables

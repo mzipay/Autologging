@@ -26,14 +26,15 @@ function.
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.1"
+__version__ = "0.2"
 
 import logging
 import os
 import unittest
 
 from test import ListHandler
-from test.loggedclasses import ModuleLoggerClass, NamedLoggerClass
+from test.loggedclasses import (ModuleLoggerClass, NamedLoggerClass,
+                                OuterClass, _InternalClass)
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)
@@ -173,11 +174,53 @@ class NamedLoggerLoggedTest(unittest.TestCase):
                          record.getMessage())
 
 
+class OuterClassTest(unittest.TestCase):
+    """Test :func:`autologging.logged` on an inner class."""
+
+    def test_inner_class_logger_name(self):
+        if (hasattr(OuterClass.InnerClass, "__qualname__")):
+            expected_name = "test.loggedclasses.OuterClass.InnerClass"
+        else:
+            expected_name = "test.loggedclasses.InnerClass"
+        self.assertEqual(expected_name,
+                         OuterClass.InnerClass._InnerClass__logger.name)
+
+
+class InternalClassTest(unittest.TestCase):
+    """Test :func:`autologging.logged` on an internal and inner internal
+    class.
+
+    """
+
+    def test_internal_class_logger_member(self):
+        self.assertTrue(hasattr(_InternalClass, "_InternalClass__logger"))
+
+    def test_internal_class_logger_name(self):
+        self.assertEqual("test.loggedclasses._InternalClass",
+                         _InternalClass._InternalClass__logger.name)
+
+    def test_internal_inner_class_logger_member(self):
+        self.assertTrue(hasattr(_InternalClass._InnerInternalClass,
+                                "_InnerInternalClass__logger"))
+
+    def test_internal_inner_class_logger_name(self):
+        if (hasattr(_InternalClass._InnerInternalClass, "__qualname__")):
+            expected_name = \
+                    "test.loggedclasses._InternalClass._InnerInternalClass"
+        else:
+            expected_name = "test.loggedclasses._InnerInternalClass"
+        self.assertEqual(
+            expected_name,
+            _InternalClass._InnerInternalClass._InnerInternalClass__logger.name)
+
+
 def suite():
     """Build the test suite for :func:`autologging.logged`."""
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ModuleLoggerLoggedTest))
     suite.addTest(unittest.makeSuite(NamedLoggerLoggedTest))
+    suite.addTest(unittest.makeSuite(OuterClassTest))
+    suite.addTest(unittest.makeSuite(InternalClassTest))
     return suite
 
 
