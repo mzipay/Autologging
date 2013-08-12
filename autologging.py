@@ -87,29 +87,12 @@ def logged(obj):
         themselves be decorated with ``@logged``.
 
     """
-    if (isinstance(obj, logging.Logger)):
-        # decorated as `@logged(logger)' - use logger as parent
-        def logged_decorator(class_):
-            if (hasattr(class_, "__qualname__")):
-                logger_name = class_.__qualname__
-            else:
-                logger_name = class_.__name__
-            logger = logging.getLogger("%s.%s" % (obj.name, logger_name))
-            # removed leading underscores before creating the obfuscated
-            # class member variable name 
-            i = 0
-            while (class_.__name__[i] == '_'):
-                i += 1
-            setattr(class_, "_%s__logger" % class_.__name__[i:], logger)
-            return class_
-        return logged_decorator
-    else:
-        # decorated as `@logged' - use module logger as parent
+    def add_logger_to(obj, parent):
         if (hasattr(obj, "__qualname__")):
             logger_name = obj.__qualname__
         else:
             logger_name = obj.__name__
-        logger = logging.getLogger("%s.%s" % (obj.__module__, logger_name))
+        logger = logging.getLogger("%s.%s" % (parent, logger_name))
         # removed leading underscores before creating the obfuscated class
         # member variable name 
         i = 0
@@ -117,6 +100,13 @@ def logged(obj):
             i += 1
         setattr(obj, "_%s__logger" % obj.__name__[i:], logger)
         return obj
+
+    if (isinstance(obj, logging.Logger)):
+        # decorated as `@logged(logger)' - use logger as parent
+        return lambda class_: add_logger_to(class_, obj.name)
+    else:
+        # decorated as `@logged' - use module logger as parent
+        return add_logger_to(obj, obj.__module__)
 
 
 def traced(obj):
