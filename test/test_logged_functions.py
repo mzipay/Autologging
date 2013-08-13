@@ -118,7 +118,7 @@ class OuterFuncTest(unittest.TestCase):
     def test_inner_fn_logger_name(self):
         inner_fn = outer_fn()
         if (hasattr(inner_fn, "__qualname__")):
-            expected_name = "test.loggedfunctions.outer_fn.inner_fn"
+            expected_name = "test.loggedfunctions.outer_fn.<locals>.inner_fn"
         else:
             expected_name = "test.loggedfunctions.inner_fn"
         self.assertEqual(expected_name,
@@ -146,7 +146,7 @@ class InternalFuncTest(unittest.TestCase):
         _inner_internal_fn = _internal_fn()
         if (hasattr(_inner_internal_fn, "__qualname__")):
             expected_name = \
-                    "test.loggedfunctions._internal_fn._inner_internal_fn"
+                    "test.loggedfunctions._internal_fn.<locals>._inner_internal_fn"
         else:
             expected_name = "test.loggedfunctions._inner_internal_fn"
         self.assertEqual(expected_name,
