@@ -67,9 +67,10 @@ class ListHandler(logging.Handler):
 
 
 def suite():
-    from test import test_logged, test_traced, test_TracedMethods
+    from test import test_logged, test_logged_functions, test_traced, test_TracedMethods
     suite = unittest.TestSuite()
     suite.addTest(test_logged.suite())
+    suite.addTest(test_logged_functions.suite())
     suite.addTest(test_traced.suite())
     suite.addTest(test_TracedMethods.suite())
     return suite
