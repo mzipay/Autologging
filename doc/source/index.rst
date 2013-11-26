@@ -2,7 +2,7 @@
 Autologging --- easier logging and tracing for classes
 ======================================================
 
-:Release: |version|
+:Release: |release|
 
 The :mod:`autologging` module defines two decorators and a metaclass factory
 that make :py:mod:`logging` easier to use with classes.
