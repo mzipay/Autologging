@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name="Autologging",
-      version="0.1",
+      version="0.2.1",
       description="Autologging is a module containing decorators and a "
                   "metaclass used to make logging classes easier.",
       long_description="""\
