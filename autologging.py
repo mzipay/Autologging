@@ -21,10 +21,11 @@
 # SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 from functools import wraps
 import logging
+import types
 
 __all__ = [
     "logged",
@@ -41,11 +42,11 @@ logging.addLevelName(TRACE, "TRACE")
 
 
 def logged(obj):
-    """Add a named logger member to a decorated class.
+    """Add a named logger member to a decorated class or function.
 
     The logger member always has a dot-separated name consisting of the
     parent logger's name, followed by a dot ('.'), followed by the class
-    name.
+    or function name.
 
     If *obj* is a :py:class:`class`, then ``obj.__logger`` will have
     the logger name "module-name.class-name":
@@ -56,6 +57,15 @@ def logged(obj):
     ... 
     >>> Test._Test__logger.name
     'autologging.Test'
+
+    Similarly for functions:
+
+    >>> @logged
+    ... def test():
+    ...     pass
+    ... 
+    >>> test.__logger.name
+    'autologging.test'
 
     If *obj* is a :py:class:`logging.Logger` object, then that logger is
     treated as the parent logger and the decorated class's ``__logger``
@@ -69,10 +79,20 @@ def logged(obj):
     >>> Test._Test__logger.name
     'test.parent.Test'
 
+    Again, functions are similar.
+
+    >>> _logger = logging.getLogger("test.parent")
+    >>> @logged(_logger)
+    ... def test_fn():
+    ...     pass
+    ... 
+    >>> test_fn.__logger.name
+    'test.parent.test_fn'
+
     .. note::
 
-        The logger member is made "private" (i.e. ``__logger`` with
-        double underscore) to ensure that log messages that include the
+        For classes, the logger member is made "private" (i.e. ``__logger``
+        with double underscore) to ensure that log messages that include the
         *%(name)s* format placeholder are written with the correct
         name.
 
@@ -86,6 +106,16 @@ def logged(obj):
         that wish to use a provided ``self.__logger`` object **must**
         themselves be decorated with ``@logged``.
 
+    .. note::
+
+        Within a logged function, the ``__logger`` attribute must be
+        qualified by the function name, i.e. "function-name.__logger":
+
+        >>> @logged
+        ... def do_something():
+        ...     do_something.__logger.info('Doing something')
+        ...
+
     """
     def add_logger_to(obj, parent):
         if (hasattr(obj, "__qualname__")):
@@ -93,17 +123,17 @@ def logged(obj):
         else:
             logger_name = obj.__name__
         logger = logging.getLogger("%s.%s" % (parent, logger_name))
-        # removed leading underscores before creating the obfuscated class
-        # member variable name 
-        i = 0
-        while (obj.__name__[i] == '_'):
-            i += 1
-        setattr(obj, "_%s__logger" % obj.__name__[i:], logger)
-        return obj
+
+        if isinstance(obj, types.FunctionType):
+            obj.__dict__['__logger'] = logger
+            return obj
+        else:
+            setattr(obj, "_%s__logger" % obj.__name__.lstrip('_'), logger)
+            return obj
 
     if (isinstance(obj, logging.Logger)):
         # decorated as `@logged(logger)' - use logger as parent
-        return lambda class_: add_logger_to(class_, obj.name)
+        return lambda class_or_fn: add_logger_to(class_or_fn, obj.name)
     else:
         # decorated as `@logged' - use module logger as parent
         return add_logger_to(obj, obj.__module__)
