@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 
 from functools import wraps
 import logging

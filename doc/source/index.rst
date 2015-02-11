@@ -23,12 +23,11 @@ Download and Install
 --------------------
 
 * Use "`pip <https://pypi.python.org/pypi/pip>`_ install Autologging".
-* Download a source or built distribution from
-  `Autologging on SourceForge <http://sourceforge.net/projects/autologging/files/autologging/>`_
-  and run either *setup.py* or the binary installer.
-* Clone the
-  `Autologging Mercurial repository from BitBucket <https://bitbucket.org/mzipay/autologging>`_
-  and run *setup.py*.
+* Download a source or built distribution from `Autologging on SourceForge
+  <http://sourceforge.net/projects/autologging/files/autologging/>`_ and run
+  either *setup.py* or the binary installer.
+* Clone the `Autologging Mercurial repository from BitBucket
+  <https://bitbucket.org/mzipay/autologging>`_ and run *setup.py*.
 
 If you download or clone the source, the test suite can be run from the
 project root directory in either of the following ways::
@@ -90,6 +89,11 @@ A module that employs the use of ``autologging`` resembles the following::
       _logger.debug("I am doing something helpful.")
 
 
+   @logged(_logger)
+   def another_helper():
+      another_helper.__logger.info("some useful information here")
+
+
    @logged
    class MyClass(metaclass=TracedMethods("my_staticmethod", "my_classmethod",
                                          "my_instancemethod")):
@@ -104,6 +108,10 @@ A module that employs the use of ``autologging`` resembles the following::
 
       def my_instancemethod(self):
          self.__logger.debug("I am an instance method.")
+
+.. versionadded:: 0.2.2
+   Module-level (and inner) functions may now be decorated with ``@logged``.
+   Use ``<function-name>.__logger`` to access the logger.
 
 .. versionchanged:: 0.2
    Inner classes and "internal" classes (i.e. classes named with leading
@@ -125,3 +133,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+

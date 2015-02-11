@@ -6,6 +6,7 @@ MANIFEST
 *.pyo
 *.log
 *.bak
+doc/sphinx_rtd_theme
 
 syntax: regexp
 ^\.settings$

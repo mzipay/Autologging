@@ -28,6 +28,11 @@ In a module *my_module.py*::
 
 
    @logged
+   def my_other_function():
+      my_other_function.__logger.info("info message from a logged function")
+
+
+   @logged
    class MyClass(metaclass=TracedMethods("my_classmethod", "my_method")):
 
       @logged
@@ -60,6 +65,7 @@ methods above (in their defined order) would produce the following log output::
    TRACE:my_module:CALL my_function *() **{}
    DEBUG:my_module:debug message from a traced function
    TRACE:my_module:RETURN my_function None
+   INFO:my_module:info message from a logged function
    INFO:my_module.MyClass.Inner:info message from a NON-traced inner class method")
    INFO:my_module.MyClass:info message from a NON-traced static method
    TRACE:my_module.MyClass:CALL MyClass.my_classmethod *() **{}
@@ -86,6 +92,11 @@ In a module *my_module.py*::
    @traced(_tracer)
    def my_function():
       _logger.debug("debug message from a traced function")
+
+
+   @logged(_logger)
+   def my_other_function():
+      my_other_function.__logger.info("info message from a logged function")
 
 
    @logged(_logger)
@@ -122,6 +133,7 @@ methods above (in their defined order) would produce the following log output::
    TRACE:myapp.tracing:CALL my_function *() **{}
    DEBUG:myapp:debug message from a traced function
    TRACE:myapp.tracing:RETURN my_function None
+   INFO:myapp:info message from a logged function
    INFO:myapp.MyClass.Inner:info message from a NON-traced inner class method
    INFO:myapp.MyClass:info message from a NON-traced static method
    TRACE:myapp.tracing.MyClass:CALL MyClass.my_classmethod *() **{}
