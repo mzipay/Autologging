@@ -3,34 +3,34 @@
 from setuptools import setup
 
 setup(name="Autologging",
-      version="0.2.1",
+      version="0.3.0",
       description="Autologging is a module containing decorators and a "
                   "metaclass used to make logging classes easier.",
       long_description="""\
 Autologging provides two decorators and a metaclass factory:
 
 @logged
-- creates a class-level '__logger' member
-- the logger is automatically named to match the dotted-name of the class
+   Decorate a class (or function) to create a ``__logger`` member.
+   The logger is automatically named to match the dotted-name of the
+   class or module.
+   Alternatively, provide a specific logger using ``@logged(logger)``.
 
 @traced
-- decorates a module-level function to provide call/return tracing
-- log record attributes (pathname, filename, lineno, module, funcName)
-  are correctly preserved (i.e. they refer to the original function, NOT
-  the proxy function returned by the decorator)
+   Decorate a module-level function to provide call/return tracing.
+   The log record attributes *pathname*, *filename*, *lineno*, *module*,
+   and *funcName* work as expected (i.e. they refer to the original
+   function, NOT the proxy function returned by the decorator).
 
 TracedMethods
-- creates a metaclass that adds automatic tracing to specified class
-  methods (just like @traced does for module-level functions)
-- log record attributes (pathname, filename, lineno, module, funcName)
-  are correctly preserved (i.e. they refer to the original class method,
-  NOT the proxy method installed by the metaclass)
+   Create a metaclass that adds automatic tracing to specified class
+   methods (just like @traced does for module-level functions).
+   The log record attributes *pathname*, *filename*, *lineno*, *module*,
+   and *funcName* work as expected (i.e. they refer to the original
+   class method, NOT the proxy method installed by the metaclass).
 
 Additionally, the autologging module defines and registers a custom
 log level named "TRACE" (level 1) so that tracing messages can be
 toggled on/off independently of DEBUG-level logging.
-
-Autologging runs on Python 2.7 and 3.2+.
 """,
     author="Matthew Zipay",
     author_email="mattz@ninthtest.net",
@@ -49,6 +49,7 @@ Autologging runs on Python 2.7 and 3.2+.
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.2",
         "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: System :: Logging",
@@ -56,3 +57,4 @@ Autologging runs on Python 2.7 and 3.2+.
     license="MIT License",
     keywords=["logging", "tracing"]
 )
+
