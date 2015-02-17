@@ -25,7 +25,7 @@ Autologging provides two decorators and a metaclass factory:
    class or module.
    Alternatively, provide a specific logger using ``@logged(logger)``.
 
-**@traced**
+**\@traced**
    Decorate a module-level function to provide call/return tracing.
    The log record attributes *pathname*, *filename*, *lineno*, *module*,
    and *funcName* work as expected (i.e. they refer to the original
@@ -63,4 +63,3 @@ project root directory in either of the following ways:
 	python -m unittest test.suite
 
 	python setup.py test
-
