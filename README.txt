@@ -19,19 +19,19 @@ INTRODUCTION
 
 Autologging provides two decorators and a metaclass factory:
 
-**@logged**
+**``@logged``**
    Decorate a class (or function) to create a ``__logger`` member.
    The logger is automatically named to match the dotted-name of the
    class or module.
    Alternatively, provide a specific logger using ``@logged(logger)``.
 
-**\@traced**
+**``@traced``**
    Decorate a module-level function to provide call/return tracing.
    The log record attributes *pathname*, *filename*, *lineno*, *module*,
    and *funcName* work as expected (i.e. they refer to the original
    function, NOT the proxy function returned by the decorator).
 
-**TracedMethods**
+**``TracedMethods``**
    Create a metaclass that adds automatic tracing to specified class
    methods (just like @traced does for module-level functions).
    The log record attributes *pathname*, *filename*, *lineno*, *module*,
