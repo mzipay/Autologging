@@ -10,8 +10,8 @@ AUTHOR:
 LICENSE:
    MIT License (see the LICENSE.txt file)
 
-PYTHON VERSION:
-   Python 2.7, 3.2 - 3.4
+PYTHON COMPATIBILITY:
+   Python 2.7, 3.2+
 
 
 INTRODUCTION
@@ -62,3 +62,10 @@ project root directory in either of the following ways:
    python -m unittest test.suite
 
    python setup.py test
+
+There are also a number of :mod:`doctest` tests embedded within Autologging's
+docstrings (written using Python 3 syntax). If you are running Python 3.2+, you
+can run the doctests like so:
+
+   python -m doctest autologging.py
+
