@@ -3,34 +3,34 @@
 from setuptools import setup
 
 setup(name="Autologging",
-      version="0.3.0",
-      description="Autologging is a module containing decorators and a "
-                  "metaclass used to make logging classes easier.",
+      version="0.4.0",
+      description="Autologging makes logging and tracing Python classes easy.",
       long_description="""\
 Autologging provides two decorators and a metaclass factory:
 
-@logged
+**@logged**
    Decorate a class (or function) to create a ``__logger`` member.
    The logger is automatically named to match the dotted-name of the
    class or module.
-   Alternatively, provide a specific logger using ``@logged(logger)``.
+   Alternatively, provide a specific logger by passing it to the
+   decorator (i.e. ``logged(my_logger)``).
 
-@traced
+**@traced**
    Decorate a module-level function to provide call/return tracing.
    The log record attributes *pathname*, *filename*, *lineno*, *module*,
    and *funcName* work as expected (i.e. they refer to the original
    function, NOT the proxy function returned by the decorator).
 
-TracedMethods
+**TracedMethods**
    Create a metaclass that adds automatic tracing to specified class
-   methods (just like @traced does for module-level functions).
+   methods (just like ``@traced`` does for module-level functions).
    The log record attributes *pathname*, *filename*, *lineno*, *module*,
    and *funcName* work as expected (i.e. they refer to the original
    class method, NOT the proxy method installed by the metaclass).
 
-Additionally, the autologging module defines and registers a custom
-log level named "TRACE" (level 1) so that tracing messages can be
-toggled on/off independently of DEBUG-level logging.
+Additionally, an ``autologging.TRACE`` (level 1) custom log level is
+registered with the Python ``logging`` module so that tracing messages
+can be toggled on/off independently of DEBUG-level logging.
 """,
     author="Matthew Zipay",
     author_email="mattz@ninthtest.net",

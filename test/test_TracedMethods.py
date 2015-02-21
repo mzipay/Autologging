@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013 Matthew Zipay <mattz@ninthtest.net>
+# Copyright (c) 2013-2015 Matthew Zipay <mattz@ninthtest.net>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,435 +26,495 @@ metaclass factory.
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.1"
+__version__ = "0.4.0"
 
 import logging
 import os
 import sys
 import unittest
 
-from autologging import TRACE
-from test import ListHandler
-
-if (sys.version_info.major >= 3):
-    from test.tracedmethods3 import (ModuleLoggerTracedClass,
-                                     NamedLoggerTracedClass)
-else:
-    from test.tracedmethods2 import (ModuleLoggerTracedClass,
-                                     NamedLoggerTracedClass)
+from autologging import AutologgingProxyDescriptor, _is_private, _mangle, TRACE
+from test import list_handler, named_tracer
+from test.dummy import (
+    _TracedParent,
+    dummyM_module_logger,
+    get_dummyM_lineno,
+    ModuleLoggerExplicitTracedClass,
+    ModuleLoggerImplicitSpecialTracedClass,
+    ModuleLoggerImplicitTracedClass,
+    NamedTracerExplicitTracedClass,
+    NamedTracerImplicitSpecialTracedClass,
+    NamedTracerImplicitTracedClass,
+    NonTracedChildTracedParent,
+    TracedChildNonTracedParent,
+    TracedChildTracedParent,
+)
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)
 
 
-class ModuleLoggerTracedMethodsTest(unittest.TestCase):
+def _get_logger_name(class_):
+    parent_logger_name = (
+        dummyM_module_logger.name if ("ModuleLogger" in class_.__name__)
+        else named_tracer.name)
+    expected_logger_name = "%s.%s" % (
+        parent_logger_name,
+        getattr(class_, "__qualname__", class_.__name__))
+    return expected_logger_name
+
+
+def _get_pathname(method):
+    if (hasattr(method, "__wrapped__")):
+        return method.__wrapped__.__code__.co_filename
+    else:
+        return method.__code__.co_filename
+
+
+def _get_traced_method_names(class_):
+    return [name for (name, value) in class_.__dict__.items()
+            if isinstance(value, AutologgingProxyDescriptor)]
+
+
+def _get_logger_delegator(traced_method):
+    # the logger delegators are free variables of the tracing proxy function
+    # closures
+    var_index = traced_method.__code__.co_freevars.index("logger_delegator")
+    return traced_method.__closure__[var_index].cell_contents
+
+
+class TracedMethodsTest(unittest.TestCase):
+
+    _FIXTURE = {
+        ModuleLoggerImplicitTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(ModuleLoggerImplicitTracedClass),
+                "pathname":
+                    _get_pathname(ModuleLoggerImplicitTracedClass.method),
+            },
+            "traced_method_names": {
+                "static_method": ["#MLITC.s_m:L1", "#MLITC.s_m:LN"],
+                "class_method": ["#MLITC.c_m:L1", "#MLITC.c_m:LN"],
+                "__init__": ["#MLITC.__i__:L1", "#MLITC.__i__:LN"],
+                "method": ["#MLITC.m:L1", "#MLITC.m:LN"],
+            },
+        },
+        ModuleLoggerImplicitTracedClass.NestedNamedTracerExplicitTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(
+                    ModuleLoggerImplicitTracedClass.NestedNamedTracerExplicitTracedClass),
+                "pathname": _get_pathname(
+                    ModuleLoggerImplicitTracedClass.NestedNamedTracerExplicitTracedClass.method),
+            },
+            "traced_method_names": {
+                "class_method": ["#MLITC.NNTETC.c_m:L1",
+                                 "#MLITC.NNTETC.c_m:LN"],
+                "method": ["#MLITC.NNTETC.m:L1", "#MLITC.NNTETC.m:LN"],
+            },
+        },
+        ModuleLoggerImplicitSpecialTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(ModuleLoggerImplicitSpecialTracedClass),
+                "pathname": _get_pathname(
+                    ModuleLoggerImplicitSpecialTracedClass.method),
+            },
+            "traced_method_names": {
+                "__init__": ["#MLISTC.__i__:L1", "#MLISTC.__i__:LN"],
+                "method": ["#MLISTC.m:L1", "#MLISTC.m:LN"],
+                "_nonpublic": ["#MLISTC._n:L1", "#MLISTC._n:LN"],
+                "__private": ["#MLISTC.__p:L1", "#MLISTC.__p:LN"],
+                "__eq__": ["#MLISTC.__e__:L1", "#MLISTC.__e__:LN"],
+            },
+        },
+        ModuleLoggerExplicitTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(ModuleLoggerExplicitTracedClass),
+                "pathname":
+                    _get_pathname(ModuleLoggerExplicitTracedClass.method),
+            },
+            "traced_method_names": {
+                "static_method": ["#MLETC.s_m:L1", "#MLETC.s_m:LN"],
+                "__init__": ["#MLETC.__i__:L1", "#MLETC.__i__:LN"],
+                "_nonpublic": ["#MLETC._n:L1", "#MLETC._n:LN"],
+                "__private": ["#MLETC.__p:L1", "#MLETC.__p:LN"],
+            },
+        },
+        NamedTracerImplicitTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(NamedTracerImplicitTracedClass),
+                "pathname":
+                    _get_pathname(NamedTracerImplicitTracedClass.method),
+            },
+            "traced_method_names": {
+                "static_method": ["#NTITC.s_m:L1", "#NTITC.s_m:LN"],
+                "class_method": ["#NTITC.c_m:L1", "#NTITC.c_m:LN"],
+                "__init__": ["#NTITC.__i__:L1", "#NTITC.__i__:LN"],
+                "method": ["#NTITC.m:L1", "#NTITC.m:LN"],
+            },
+        },
+        NamedTracerImplicitTracedClass.NestedModuleLoggerExplicitTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(
+                    NamedTracerImplicitTracedClass.NestedModuleLoggerExplicitTracedClass),
+                "pathname": _get_pathname(
+                    NamedTracerImplicitTracedClass.NestedModuleLoggerExplicitTracedClass.method),
+            },
+            "traced_method_names": {
+                "static_method": ["#NTITC.NMLETC.s_m:L1",
+                                  "#NTITC.NMLETC.s_m:LN"],
+                "method": ["#NTITC.NMLETC.m:L1", "#NTITC.NMLETC.m:LN"],
+            },
+        },
+        NamedTracerImplicitSpecialTracedClass: {
+            "log_record_fields": {
+                "name":
+                    _get_logger_name(NamedTracerImplicitSpecialTracedClass),
+                "pathname": _get_pathname(
+                    NamedTracerImplicitSpecialTracedClass.method),
+            },
+            "traced_method_names": {
+                "method": ["#NTISTC.m:L1", "#NTISTC.m:LN"],
+                "_nonpublic": ["#NTISTC._n:L1", "#NTISTC._n:LN"],
+                "__private": ["#NTISTC.__p:L1", "#NTISTC.__p:LN"],
+                "__eq__": ["#NTISTC.__e__:L1", "#NTISTC.__e__:LN"],
+            },
+        },
+        NamedTracerExplicitTracedClass: {
+            "log_record_fields": {
+                "name": _get_logger_name(NamedTracerExplicitTracedClass),
+                "pathname":
+                    _get_pathname(NamedTracerExplicitTracedClass.method),
+            },
+            "traced_method_names": {
+                "class_method": ["#NTETC.c_m:L1", "#NTETC.c_m:LN"],
+                "_nonpublic": ["#NTETC._n:L1", "#NTETC._n:LN"],
+                "__private": ["#NTETC.__p:L1", "#NTETC.__p:LN"],
+                "__eq__": ["#NTETC.__e__:L1", "#NTETC.__e__:LN"],
+            },
+        },
+    }
 
     @classmethod
     def setUpClass(cls):
-        cls._handler = ListHandler(level=TRACE)
-        for method_name in ["traced_staticmethod", "traced_classmethod",
-                            "traced_instancemethod"]:
-            method = getattr(ModuleLoggerTracedClass, method_name)
-            # the testing handler needs to be added to the logger proxy, which
-            # is a free variable of the method tracer closure
-            closure_index = \
-                method.__code__.co_freevars.index("logger_proxy")
-            logger_proxy = \
-                method.__closure__[closure_index].cell_contents
-            logger_proxy.setLevel(TRACE)
-            logger_proxy.addHandler(cls._handler)
-        cls.expected_name = ("%s.ModuleLoggerTracedClass" %
-                             ModuleLoggerTracedClass.__module__)  # @UndefinedVariable
-        cls.expected_levelname = "TRACE"
-        cls.expected_levelno = TRACE
-        # fetch the expected pathname from one of the original methods (not the
-        # tracer proxy methods); the originals are available as free variables
-        # of the method tracer closures
-        closure_index = \
-            ModuleLoggerTracedClass.traced_instancemethod.__code__.co_freevars.index("method")  # @UndefinedVariable
-        method = \
-            ModuleLoggerTracedClass.traced_instancemethod.__closure__[closure_index].cell_contents
-        cls.expected_pathname = method.__code__.co_filename
-        cls.expected_filename = os.path.basename(cls.expected_pathname)
-        cls.expected_module = os.path.splitext(cls.expected_filename)[0]
+        dummyM_module_logger.setLevel(TRACE)
 
-    def test_traced_staticmethod_call(self):
-        value = \
-            ModuleLoggerTracedClass.traced_staticmethod("spam", keyword="eggs")
-        self.assertEqual("spam and eggs", value)
-        return_record = self._handler.records.pop()
-        call_record = self._handler.records.pop()
-        self.assertEqual(0, len(self._handler.records),
-                          repr(self._handler.records))
-        self.assertEqual(self.expected_name, call_record.name)
-        self.assertEqual(self.expected_levelname, call_record.levelname)
-        self.assertEqual(self.expected_levelno, call_record.levelno)
-        self.assertEqual(self.expected_pathname, call_record.pathname)
-        self.assertEqual(self.expected_filename, call_record.filename)
-        self.assertEqual(self.expected_module, call_record.module)
-        self.assertEqual(40, call_record.lineno)
-        self.assertEqual("traced_staticmethod", call_record.funcName)
-        self.assertEqual(
-            "CALL ModuleLoggerTracedClass.traced_staticmethod *('spam',) **{'keyword': 'eggs'}",
-            call_record.getMessage())
-        self.assertEqual(self.expected_name, return_record.name)
-        self.assertEqual(self.expected_levelname, return_record.levelname)
-        self.assertEqual(self.expected_levelno, return_record.levelno)
-        self.assertEqual(self.expected_pathname, return_record.pathname)
-        self.assertEqual(self.expected_filename, return_record.filename)
-        self.assertEqual(self.expected_module, return_record.module)
-        self.assertEqual(43, return_record.lineno)
-        self.assertEqual("traced_staticmethod", return_record.funcName)
-        self.assertEqual(
-            "RETURN ModuleLoggerTracedClass.traced_staticmethod 'spam and eggs'",
-            return_record.getMessage())
+    def setUp(self):
+        list_handler.reset()
+        self._fixture = None
 
-    def test_traced_staticmethod_magicattrs(self):
-        self.assertEqual(
-            ModuleLoggerTracedClass.__module__,  # @UndefinedVariable
-            ModuleLoggerTracedClass.traced_staticmethod.__module__,  # @UndefinedVariable
-            "ModuleLoggerTracedClass.traced_staticmethod.__module__")
-        self.assertEqual(
-            "traced_staticmethod",
-            ModuleLoggerTracedClass.traced_staticmethod.__name__,  # @UndefinedVariable
-            "ModuleLoggerTracedClass.traced_staticmethod.__name__")
-        self.assertEqual("ModuleLoggerTracedClass static method.",
-                         ModuleLoggerTracedClass.traced_staticmethod.__doc__,
-                         "ModuleLoggerTracedClass.traced_staticmethod.__doc__")
-        if (sys.version_info.major >= 3):
-            self.assertEqual(
-                dict(),
-                ModuleLoggerTracedClass.traced_staticmethod.__annotations__,  # @UndefinedVariable
-                "ModuleLoggerTracedClass.traced_staticmethod.__annotations__")
-            if (sys.version_info.minor >= 3):
-                self.assertEqual(
-                    "ModuleLoggerTracedClass.traced_staticmethod",
-                    ModuleLoggerTracedClass.traced_staticmethod.__qualname__,  # @UndefinedVariable
-                    "ModuleLoggerTracedClass.traced_staticmethod.__qualname__")
+    def test_ModuleLoggerImplicitTracedClass(self):
+        self._fixture = self._FIXTURE[ModuleLoggerImplicitTracedClass]
+        self._assert_traced_class(ModuleLoggerImplicitTracedClass)
 
-    def test_traced_classmethod_call(self):
-        value = ModuleLoggerTracedClass.traced_classmethod("green eggs",
-                                                           keyword="ham")
-        self.assertEqual("green eggs and ham", value)
-        return_record = self._handler.records.pop()
-        call_record = self._handler.records.pop()
-        self.assertEqual(0, len(self._handler.records),
-                          repr(self._handler.records))
-        self.assertEqual(self.expected_name, call_record.name)
-        self.assertEqual(self.expected_levelname, call_record.levelname)
-        self.assertEqual(self.expected_levelno, call_record.levelno)
-        self.assertEqual(self.expected_pathname, call_record.pathname)
-        self.assertEqual(self.expected_filename, call_record.filename)
-        self.assertEqual(self.expected_module, call_record.module)
-        self.assertEqual(45, call_record.lineno)
-        self.assertEqual("traced_classmethod", call_record.funcName)
-        self.assertEqual(
-            "CALL ModuleLoggerTracedClass.traced_classmethod *('green eggs',) **{'keyword': 'ham'}",
-            call_record.getMessage())
-        self.assertEqual(self.expected_name, return_record.name)
-        self.assertEqual(self.expected_levelname, return_record.levelname)
-        self.assertEqual(self.expected_levelno, return_record.levelno)
-        self.assertEqual(self.expected_pathname, return_record.pathname)
-        self.assertEqual(self.expected_filename, return_record.filename)
-        self.assertEqual(self.expected_module, return_record.module)
-        self.assertEqual(48, return_record.lineno)
-        self.assertEqual("traced_classmethod", return_record.funcName)
-        self.assertEqual(
-            "RETURN ModuleLoggerTracedClass.traced_classmethod 'green eggs and ham'",
-            return_record.getMessage())
+    def test_NestedNamedTracerExplicitTracedClass(self):
+        self._fixture = self._FIXTURE[
+            ModuleLoggerImplicitTracedClass.NestedNamedTracerExplicitTracedClass]
+        self._assert_traced_class(
+            ModuleLoggerImplicitTracedClass.NestedNamedTracerExplicitTracedClass)
 
-    def test_traced_classmethod_magicattrs(self):
-        self.assertEqual(
-            ModuleLoggerTracedClass.__module__,  # @UndefinedVariable
-            ModuleLoggerTracedClass.traced_classmethod.__module__,  # @UndefinedVariable
-            "ModuleLoggerTracedClass.traced_classmethod.__module__")
-        self.assertEqual(
-            "traced_classmethod",
-            ModuleLoggerTracedClass.traced_classmethod.__name__,  # @UndefinedVariable
-            "ModuleLoggerTracedClass.traced_classmethod.__name__")
-        self.assertEqual("ModuleLoggerTracedClass class method.",
-                         ModuleLoggerTracedClass.traced_classmethod.__doc__,
-                         "ModuleLoggerTracedClass.traced_classmethod.__doc__")
-        if (sys.version_info.major >= 3):
-            self.assertEqual(
-                dict(),
-                ModuleLoggerTracedClass.traced_classmethod.__annotations__,  # @UndefinedVariable
-                "ModuleLoggerTracedClass.traced_classmethod.__annotations__")
-            if (sys.version_info.minor >= 3):
-                self.assertEqual(
-                    "ModuleLoggerTracedClass.traced_classmethod",
-                    ModuleLoggerTracedClass.traced_classmethod.__qualname__,  # @UndefinedVariable
-                    "ModuleLoggerTracedClass.traced_classmethod.__qualname__")
+    def test_ModuleLoggerImplicitSpecialTracedClass(self):
+        self._fixture = self._FIXTURE[ModuleLoggerImplicitSpecialTracedClass]
+        self._assert_traced_class(ModuleLoggerImplicitSpecialTracedClass)
 
-    def test_traced_instancemethod_call(self):
-        instance = ModuleLoggerTracedClass()
-        value = instance.traced_instancemethod("Batman", keyword="Robin")
-        self.assertEqual("Batman and Robin", value)
-        return_record = self._handler.records.pop()
-        call_record = self._handler.records.pop()
-        self.assertEqual(0, len(self._handler.records),
-                          repr(self._handler.records))
-        self.assertEqual(self.expected_name, call_record.name)
-        self.assertEqual(self.expected_levelname, call_record.levelname)
-        self.assertEqual(self.expected_levelno, call_record.levelno)
-        self.assertEqual(self.expected_pathname, call_record.pathname)
-        self.assertEqual(self.expected_filename, call_record.filename)
-        self.assertEqual(self.expected_module, call_record.module)
-        self.assertEqual(50, call_record.lineno)
-        self.assertEqual("traced_instancemethod", call_record.funcName)
-        self.assertEqual(
-            "CALL ModuleLoggerTracedClass.traced_instancemethod *('Batman',) **{'keyword': 'Robin'}",
-            call_record.getMessage())
-        self.assertEqual(self.expected_name, return_record.name)
-        self.assertEqual(self.expected_levelname, return_record.levelname)
-        self.assertEqual(self.expected_levelno, return_record.levelno)
-        self.assertEqual(self.expected_pathname, return_record.pathname)
-        self.assertEqual(self.expected_filename, return_record.filename)
-        self.assertEqual(self.expected_module, return_record.module)
-        self.assertEqual(52, return_record.lineno)
-        self.assertEqual("traced_instancemethod", return_record.funcName)
-        self.assertEqual(
-            "RETURN ModuleLoggerTracedClass.traced_instancemethod 'Batman and Robin'",
-            return_record.getMessage())
+    def test_ModuleLoggerExplicitTracedClass(self):
+        self._fixture = self._FIXTURE[ModuleLoggerExplicitTracedClass]
+        self._assert_traced_class(ModuleLoggerExplicitTracedClass)
 
-    def test_traced_instancemethod_magicattrs(self):
-        self.assertEqual(
-            ModuleLoggerTracedClass.__module__,  # @UndefinedVariable
-            ModuleLoggerTracedClass.traced_instancemethod.__module__,  # @UndefinedVariable
-            "ModuleLoggerTracedClass.traced_instancemethod.__module__")
-        self.assertEqual(
-            "traced_instancemethod",
-            ModuleLoggerTracedClass.traced_instancemethod.__name__,  # @UndefinedVariable
-            "ModuleLoggerTracedClass.traced_instancemethod.__name__")
-        self.assertEqual("ModuleLoggerTracedClass instance method.",
-                         ModuleLoggerTracedClass.traced_instancemethod.__doc__,
-                         "ModuleLoggerTracedClass.traced_instancemethod.__doc__")
-        if (sys.version_info.major >= 3):
-            self.assertEqual(
-                dict(),
-                ModuleLoggerTracedClass.traced_instancemethod.__annotations__,  # @UndefinedVariable
-                "ModuleLoggerTracedClass.traced_instancemethod.__annotations__")
-            if (sys.version_info.minor >= 3):
-                self.assertEqual(
-                    "ModuleLoggerTracedClass.traced_instancemethod",
-                    ModuleLoggerTracedClass.traced_instancemethod.__qualname__,  # @UndefinedVariable
-                    "ModuleLoggerTracedClass.traced_instancemethod.__qualname__")
+    def test_NamedTracerImplicitTracedClass(self):
+        self._fixture = self._FIXTURE[NamedTracerImplicitTracedClass]
+        self._assert_traced_class(NamedTracerImplicitTracedClass)
 
-    def test_nontraced_method_call(self):
-        instance = ModuleLoggerTracedClass()
-        value = instance.nontraced_method()
-        self.assertEqual("nothing to see here", value)
-        self.assertEqual(0, len(self._handler.records),
-                         repr(self._handler.records))
+    def test_NestedModuleLoggerExplicitTracedClass(self):
+        self._fixture = self._FIXTURE[
+            NamedTracerImplicitTracedClass.NestedModuleLoggerExplicitTracedClass]
+        self._assert_traced_class(
+            NamedTracerImplicitTracedClass.NestedModuleLoggerExplicitTracedClass)
 
+    def test_NamedTracerImplicitSpecialTracedClass(self):
+        self._fixture = self._FIXTURE[NamedTracerImplicitSpecialTracedClass]
+        self._assert_traced_class(NamedTracerImplicitSpecialTracedClass)
 
-class NamedLoggerTracedMethodsTest(unittest.TestCase):
+    def test_NamedTracerExplicitTracedClass(self):
+        self._fixture = self._FIXTURE[NamedTracerExplicitTracedClass]
+        self._assert_traced_class(NamedTracerExplicitTracedClass)
 
-    @classmethod
-    def setUpClass(cls):
-        cls._handler = ListHandler(level=TRACE)
-        for method_name in ["traced_staticmethod", "traced_classmethod",
-                            "traced_instancemethod"]:
-            method = getattr(NamedLoggerTracedClass, method_name)
-            # the testing handler needs to be added to the logger proxy, which
-            # is a free variable of the method tracer closure
-            closure_index = \
-                method.__code__.co_freevars.index("logger_proxy")
-            logger_proxy = \
-                method.__closure__[closure_index].cell_contents
-            logger_proxy.setLevel(TRACE)
-            logger_proxy.addHandler(cls._handler)
-        cls.expected_name = "traced.methods.testing.NamedLoggerTracedClass"
-        cls.expected_levelname = "TRACE"
-        cls.expected_levelno = TRACE
-        # fetch the expected pathname from one of the original methods (not the
-        # tracer proxy methods); the originals are available as free variables
-        # of the method tracer closures
-        closure_index = \
-            NamedLoggerTracedClass.traced_instancemethod.__code__.co_freevars.index("method")  # @UndefinedVariable
-        method = \
-            NamedLoggerTracedClass.traced_instancemethod.__closure__[closure_index].cell_contents
-        cls.expected_pathname = method.__code__.co_filename
-        cls.expected_filename = os.path.basename(cls.expected_pathname)
-        cls.expected_module = os.path.splitext(cls.expected_filename)[0]
+    def test_NonTracedChildTracedParent(self):
+        self.assertEqual([],
+            _get_traced_method_names(NonTracedChildTracedParent))
 
-    def test_traced_staticmethod_call(self):
-        value = \
-            NamedLoggerTracedClass.traced_staticmethod("spam", keyword="eggs")
-        self.assertEqual("spam and eggs", value)
-        return_record = self._handler.records.pop()
-        call_record = self._handler.records.pop()
-        self.assertEqual(0, len(self._handler.records),
-                          repr(self._handler.records))
-        self.assertEqual(self.expected_name, call_record.name)
-        self.assertEqual(self.expected_levelname, call_record.levelname)
-        self.assertEqual(self.expected_levelno, call_record.levelno)
-        self.assertEqual(self.expected_pathname, call_record.pathname)
-        self.assertEqual(self.expected_filename, call_record.filename)
-        self.assertEqual(self.expected_module, call_record.module)
-        self.assertEqual(66, call_record.lineno)
-        self.assertEqual("traced_staticmethod", call_record.funcName)
-        self.assertEqual(
-            "CALL NamedLoggerTracedClass.traced_staticmethod *('spam',) **{'keyword': 'eggs'}",
-            call_record.getMessage())
-        self.assertEqual(self.expected_name, return_record.name)
-        self.assertEqual(self.expected_levelname, return_record.levelname)
-        self.assertEqual(self.expected_levelno, return_record.levelno)
-        self.assertEqual(self.expected_pathname, return_record.pathname)
-        self.assertEqual(self.expected_filename, return_record.filename)
-        self.assertEqual(self.expected_module, return_record.module)
-        self.assertEqual(69, return_record.lineno)
-        self.assertEqual("traced_staticmethod", return_record.funcName)
-        self.assertEqual(
-            "RETURN NamedLoggerTracedClass.traced_staticmethod 'spam and eggs'",
-            return_record.getMessage())
+        obj = NonTracedChildTracedParent()
+        self.assertEqual("INSTANCE", obj.method())
 
-    def test_traced_staticmethod_magicattrs(self):
-        self.assertEqual(
-            NamedLoggerTracedClass.__module__,  # @UndefinedVariable
-            NamedLoggerTracedClass.traced_staticmethod.__module__,  # @UndefinedVariable
-            "NamedLoggerTracedClass.traced_staticmethod.__module__")
-        self.assertEqual(
-            "traced_staticmethod",
-            NamedLoggerTracedClass.traced_staticmethod.__name__,  # @UndefinedVariable
-            "NamedLoggerTracedClass.traced_staticmethod.__name__")
-        self.assertEqual("NamedLoggerTracedClass static method.",
-                         NamedLoggerTracedClass.traced_staticmethod.__doc__,
-                         "NamedLoggerTracedClass.traced_staticmethod.__doc__")
-        if (sys.version_info.major >= 3):
-            self.assertEqual(
-                dict(),
-                NamedLoggerTracedClass.traced_staticmethod.__annotations__,  # @UndefinedVariable
-                "NamedLoggerTracedClass.traced_staticmethod.__annotations__")
-            if (sys.version_info.minor >= 3):
-                self.assertEqual(
-                    "NamedLoggerTracedClass.traced_staticmethod",
-                    NamedLoggerTracedClass.traced_staticmethod.__qualname__,  # @UndefinedVariable
-                    "NamedLoggerTracedClass.traced_staticmethod.__qualname__")
+        self.assertEqual(4, len(list_handler.records))
 
-    def test_traced_classmethod_call(self):
-        value = NamedLoggerTracedClass.traced_classmethod("green eggs",
-                                                          keyword="ham")
-        self.assertEqual("green eggs and ham", value)
-        return_record = self._handler.records.pop()
-        call_record = self._handler.records.pop()
-        self.assertEqual(0, len(self._handler.records),
-                          repr(self._handler.records))
-        self.assertEqual(self.expected_name, call_record.name)
-        self.assertEqual(self.expected_levelname, call_record.levelname)
-        self.assertEqual(self.expected_levelno, call_record.levelno)
-        self.assertEqual(self.expected_pathname, call_record.pathname)
-        self.assertEqual(self.expected_filename, call_record.filename)
-        self.assertEqual(self.expected_module, call_record.module)
-        self.assertEqual(71, call_record.lineno)
-        self.assertEqual("traced_classmethod", call_record.funcName)
-        self.assertEqual(
-            "CALL NamedLoggerTracedClass.traced_classmethod *('green eggs',) **{'keyword': 'ham'}",
-            call_record.getMessage())
-        self.assertEqual(self.expected_name, return_record.name)
-        self.assertEqual(self.expected_levelname, return_record.levelname)
-        self.assertEqual(self.expected_levelno, return_record.levelno)
-        self.assertEqual(self.expected_pathname, return_record.pathname)
-        self.assertEqual(self.expected_filename, return_record.filename)
-        self.assertEqual(self.expected_module, return_record.module)
-        self.assertEqual(74, return_record.lineno)
-        self.assertEqual("traced_classmethod", return_record.funcName)
-        self.assertEqual(
-            "RETURN NamedLoggerTracedClass.traced_classmethod 'green eggs and ham'",
-            return_record.getMessage())
+        parent_method_return_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            "%s._TracedParent" % dummyM_module_logger.name,
+            TRACE,
+            obj.method.__code__.co_filename,
+            get_dummyM_lineno("#_TP.m:LN"),
+            "RETURN %r",
+            ("instance",),
+            None,
+            func="method"
+        )
+        self._compare_log_records(expected_record, parent_method_return_record)
 
-    def test_traced_classmethod_magicattrs(self):
-        self.assertEqual(
-            NamedLoggerTracedClass.__module__,  # @UndefinedVariable
-            NamedLoggerTracedClass.traced_classmethod.__module__,  # @UndefinedVariable
-            "NamedLoggerTracedClass.traced_classmethod.__module__")
-        self.assertEqual(
-            "traced_classmethod",
-            NamedLoggerTracedClass.traced_classmethod.__name__,  # @UndefinedVariable
-            "NamedLoggerTracedClass.traced_classmethod.__name__")
-        self.assertEqual("NamedLoggerTracedClass class method.",
-                         NamedLoggerTracedClass.traced_classmethod.__doc__,
-                         "NamedLoggerTracedClass.traced_classmethod.__doc__")
-        if (sys.version_info.major >= 3):
-            self.assertEqual(
-                dict(),
-                NamedLoggerTracedClass.traced_classmethod.__annotations__,  # @UndefinedVariable
-                "NamedLoggerTracedClass.traced_classmethod.__annotations__")
-            if (sys.version_info.minor >= 3):
-                self.assertEqual(
-                    "NamedLoggerTracedClass.traced_classmethod",
-                    NamedLoggerTracedClass.traced_classmethod.__qualname__,  # @UndefinedVariable
-                    "NamedLoggerTracedClass.traced_classmethod.__qualname__")
+        parent_method_call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno("#_TP.m:L1")
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = (tuple(), dict())
+        self._compare_log_records(expected_record, parent_method_call_record)
 
-    def test_traced_instancemethod_call(self):
-        instance = NamedLoggerTracedClass()
-        value = instance.traced_instancemethod("Batman", keyword="Robin")
-        self.assertEqual("Batman and Robin", value)
-        return_record = self._handler.records.pop()
-        call_record = self._handler.records.pop()
-        self.assertEqual(0, len(self._handler.records),
-                          repr(self._handler.records))
-        self.assertEqual(self.expected_name, call_record.name)
-        self.assertEqual(self.expected_levelname, call_record.levelname)
-        self.assertEqual(self.expected_levelno, call_record.levelno)
-        self.assertEqual(self.expected_pathname, call_record.pathname)
-        self.assertEqual(self.expected_filename, call_record.filename)
-        self.assertEqual(self.expected_module, call_record.module)
-        self.assertEqual(76, call_record.lineno)
-        self.assertEqual("traced_instancemethod", call_record.funcName)
-        self.assertEqual(
-            "CALL NamedLoggerTracedClass.traced_instancemethod *('Batman',) **{'keyword': 'Robin'}",
-            call_record.getMessage())
-        self.assertEqual(self.expected_name, return_record.name)
-        self.assertEqual(self.expected_levelname, return_record.levelname)
-        self.assertEqual(self.expected_levelno, return_record.levelno)
-        self.assertEqual(self.expected_pathname, return_record.pathname)
-        self.assertEqual(self.expected_filename, return_record.filename)
-        self.assertEqual(self.expected_module, return_record.module)
-        self.assertEqual(78, return_record.lineno)
-        self.assertEqual("traced_instancemethod", return_record.funcName)
-        self.assertEqual(
-            "RETURN NamedLoggerTracedClass.traced_instancemethod 'Batman and Robin'",
-            return_record.getMessage())
+        parent_init_return_record = list_handler.records.pop()
+        expected_record.funcName = "__init__"
+        expected_record.lineno = get_dummyM_lineno("#_TP.__i__:LN")
+        expected_record.msg = "RETURN %r"
+        expected_record.args = (None,)
+        self._compare_log_records(expected_record, parent_init_return_record)
 
-    def test_traced_instancemethod_magicattrs(self):
-        self.assertEqual(
-            NamedLoggerTracedClass.__module__,  # @UndefinedVariable
-            NamedLoggerTracedClass.traced_instancemethod.__module__,  # @UndefinedVariable
-            "NamedLoggerTracedClass.traced_instancemethod.__module__")
-        self.assertEqual(
-            "traced_instancemethod",
-            NamedLoggerTracedClass.traced_instancemethod.__name__,  # @UndefinedVariable
-            "NamedLoggerTracedClass.traced_instancemethod.__name__")
-        self.assertEqual("NamedLoggerTracedClass instance method.",
-                         NamedLoggerTracedClass.traced_instancemethod.__doc__,
-                         "NamedLoggerTracedClass.traced_instancemethod.__doc__")
-        if (sys.version_info.major >= 3):
-            self.assertEqual(
-                dict(),
-                NamedLoggerTracedClass.traced_instancemethod.__annotations__,  # @UndefinedVariable
-                "NamedLoggerTracedClass.traced_instancemethod.__annotations__")
-            if (sys.version_info.minor >= 3):
-                self.assertEqual(
-                    "NamedLoggerTracedClass.traced_instancemethod",
-                    NamedLoggerTracedClass.traced_instancemethod.__qualname__,  # @UndefinedVariable
-                    "NamedLoggerTracedClass.traced_instancemethod.__qualname__")
+        parent_init_call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno("#_TP.__i__:L1")
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = (tuple(), dict())
+        self._compare_log_records(expected_record, parent_init_call_record)
 
-    def test_nontraced_method_call(self):
-        instance = NamedLoggerTracedClass()
-        value = instance.nontraced_method()
-        self.assertEqual("nothing to see here", value)
-        self.assertEqual(0, len(self._handler.records),
-                         repr(self._handler.records))
+    def test_TracedChildNonTracedParent(self):
+        self.assertEqual(["method"],
+            _get_traced_method_names(TracedChildNonTracedParent))
+
+        obj = TracedChildNonTracedParent()
+        self.assertEqual("INSTANCE", obj.method())
+
+        self.assertEqual(2, len(list_handler.records))
+
+        child_method_return_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            "%s.TracedChildNonTracedParent" % dummyM_module_logger.name,
+            TRACE,
+            obj.method.__wrapped__.__code__.co_filename,
+            get_dummyM_lineno("#TCNTP.m:LN"),
+            "RETURN %r",
+            ("INSTANCE",),
+            None,
+            func="method"
+        )
+        self._compare_log_records(expected_record, child_method_return_record)
+
+        child_method_call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno("#TCNTP.m:L1")
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = (tuple(), dict())
+        self._compare_log_records(expected_record, child_method_call_record)
+
+    def test_TracedChildTracedParent(self):
+        self.assertEqual(["method"],
+            _get_traced_method_names(TracedChildTracedParent))
+
+        obj = TracedChildTracedParent()
+        self.assertEqual("INSTANCE", obj.method())
+
+        self.assertEqual(6, len(list_handler.records))
+
+        child_method_return_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            "%s.TracedChildTracedParent" % dummyM_module_logger.name,
+            TRACE,
+            obj.method.__wrapped__.__code__.co_filename,
+            get_dummyM_lineno("#TCTP.m:LN"),
+            "RETURN %r",
+            ("INSTANCE",),
+            None,
+            func="method"
+        )
+        self._compare_log_records(expected_record, child_method_return_record)
+
+        parent_method_return_record = list_handler.records.pop()
+        expected_record.name = "%s._TracedParent" % dummyM_module_logger.name
+        expected_record.lineno = get_dummyM_lineno("#_TP.m:LN")
+        expected_record.args = ("instance",)
+        self._compare_log_records(expected_record, parent_method_return_record)
+
+        parent_method_call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno("#_TP.m:L1")
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = (tuple(), dict())
+        self._compare_log_records(expected_record, parent_method_call_record)
+
+        child_method_call_record = list_handler.records.pop()
+        expected_record.name = \
+            "%s.TracedChildTracedParent" % dummyM_module_logger.name
+        expected_record.lineno = get_dummyM_lineno("#TCTP.m:L1")
+        self._compare_log_records(expected_record, child_method_call_record)
+
+        parent_init_return_record = list_handler.records.pop()
+        expected_record.name = "%s._TracedParent" % dummyM_module_logger.name
+        expected_record.lineno = get_dummyM_lineno("#_TP.__i__:LN")
+        expected_record.msg = "RETURN %r"
+        expected_record.args = (None,)
+        expected_record.funcName = "__init__"
+        self._compare_log_records(expected_record, parent_init_return_record)
+
+        parent_init_call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno("#_TP.__i__:L1")
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = (tuple(), dict())
+        self._compare_log_records(expected_record, parent_init_call_record)
+
+    def _compare_log_records(self, expected_record, actual_record):
+        self.assertEqual(expected_record.name, actual_record.name)
+        self.assertEqual(expected_record.levelname, actual_record.levelname)
+        self.assertEqual(expected_record.levelno, actual_record.levelno)
+        self.assertEqual(expected_record.pathname, actual_record.pathname)
+        self.assertEqual(expected_record.lineno, actual_record.lineno)
+        self.assertEqual(expected_record.funcName, actual_record.funcName)
+        self.assertEqual(expected_record.getMessage(), actual_record.getMessage())
+
+    def _assert_traced_class(self, class_):
+        self._assert_traced_method_names(class_)
+        self._assert_logger_delegator(class_)
+        self._assert_traced_method_log_records(class_)
+
+    def _assert_traced_method_names(self, class_):
+        expected_method_names = [
+            name if (not _is_private(name)) else _mangle(name, class_.__name__)
+            for name in self._fixture["traced_method_names"]]
+        actual_method_names = _get_traced_method_names(class_)
+        self.assertEqual(sorted(expected_method_names),
+                         sorted(actual_method_names))
+
+    def _assert_logger_delegator(self, class_):
+        expected_logger_name = self._fixture["log_record_fields"]["name"]
+        for method_name in self._fixture["traced_method_names"]:
+            if (_is_private(method_name)):
+                method_name = _mangle(method_name, class_.__name__)
+            method = getattr(class_, method_name)
+            logger_delegator = _get_logger_delegator(method)
+            self.assertEqual(expected_logger_name, logger_delegator.name)
+            self.assertEqual(TRACE, logger_delegator.getEffectiveLevel())
+
+    def _assert_traced_method_log_records(self, class_):
+        method_names = self._fixture["traced_method_names"]
+
+        obj = class_()
+
+        if ("__init__" in method_names):
+            self.assertEqual(2, len(list_handler.records))
+            self._assert_init_log_records()
+
+        if ("__eq__" in method_names):
+            self.assertFalse(obj == None)
+            self.assertEqual(2, len(list_handler.records))
+            self._assert_eq_log_records()
+
+        for method_name in [name for name in method_names
+                            if (name not in ["__init__", "__eq__"])]:
+            if (not _is_private(method_name)):
+                method = getattr(obj, method_name)
+            else:
+                method = getattr(obj, _mangle(method_name, class_.__name__))
+
+            self.assertEqual("spam and eggs", method("spam", keyword="eggs"))
+            self.assertEqual(2, len(list_handler.records))
+
+            self._assert_return_log_record(method_name)
+            self._assert_call_log_record(method_name)
+
+    def _assert_init_log_records(self):
+        expected_logger_name = self._fixture["log_record_fields"]["name"]
+        expected_pathname = self._fixture["log_record_fields"]["pathname"]
+        expected_linenos = self._fixture["traced_method_names"]["__init__"]
+
+        return_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            expected_logger_name,
+            TRACE,
+            expected_pathname,
+            get_dummyM_lineno(expected_linenos[1]),
+            "RETURN %r",
+            (None,),
+            None,
+            func="__init__"
+        )
+        self._compare_log_records(expected_record, return_record)
+
+        call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno(expected_linenos[0])
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = (tuple(), dict())
+        self._compare_log_records(expected_record, call_record)
+
+    def _assert_eq_log_records(self):
+        expected_logger_name = self._fixture["log_record_fields"]["name"]
+        expected_pathname = self._fixture["log_record_fields"]["pathname"]
+        expected_linenos = self._fixture["traced_method_names"]["__eq__"]
+
+        return_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            expected_logger_name,
+            TRACE,
+            expected_pathname,
+            get_dummyM_lineno(expected_linenos[1]),
+            "RETURN %r",
+            (False,),
+            None,
+            func="__eq__"
+        )
+        self._compare_log_records(expected_record, return_record)
+
+        call_record = list_handler.records.pop()
+        expected_record.lineno = get_dummyM_lineno(expected_linenos[0])
+        expected_record.msg = "CALL *%r **%r"
+        expected_record.args = ((None,), dict())
+        self._compare_log_records(expected_record, call_record)
+
+    def _assert_return_log_record(self, expected_method_name):
+        expected_logger_name = self._fixture["log_record_fields"]["name"]
+        expected_pathname = self._fixture["log_record_fields"]["pathname"]
+        expected_lineno = \
+            self._fixture["traced_method_names"][expected_method_name][1]
+
+        return_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            expected_logger_name,
+            TRACE,
+            expected_pathname,
+            get_dummyM_lineno(expected_lineno),
+            "RETURN %r",
+            ("spam and eggs",),
+            None,
+            func=expected_method_name
+        )
+        self._compare_log_records(expected_record, return_record)
+
+    def _assert_call_log_record(self, expected_method_name):
+        expected_logger_name = self._fixture["log_record_fields"]["name"]
+        expected_pathname = self._fixture["log_record_fields"]["pathname"]
+        expected_lineno = \
+            self._fixture["traced_method_names"][expected_method_name][0]
+
+        call_record = list_handler.records.pop()
+        expected_record = logging.LogRecord(
+            expected_logger_name,
+            TRACE,
+            expected_pathname,
+            get_dummyM_lineno(expected_lineno),
+            "CALL *%r **%r",
+            (("spam",), {"keyword": "eggs"}),
+            None,
+            func=expected_method_name
+        )
+        self._compare_log_records(expected_record, call_record)
 
 
 def suite():
     """Build the test suite for :func:`autologging.TracedMethods`."""
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(ModuleLoggerTracedMethodsTest))
-    suite.addTest(unittest.makeSuite(NamedLoggerTracedMethodsTest))
+    suite.addTest(unittest.makeSuite(TracedMethodsTest))
+
     return suite
 
 
 if (__name__ == "__main__"):
     unittest.TextTestRunner().run(suite())
+
