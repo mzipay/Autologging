@@ -22,7 +22,7 @@
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>, "\
              "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>"
-__version__ = "0.4.0"
+__version__ = "0.4.0+doc.1"
 
 from functools import wraps
 from inspect import isclass, isroutine

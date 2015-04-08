@@ -2,6 +2,8 @@
 Logging, tracing, and inheritance
 =================================
 
+:Release: |release|
+
 Autologging's policy on inheritance is simple:
 
 **Loggers are never inherited, and inherited methods are never traced.**
