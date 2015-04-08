@@ -1,18 +1,17 @@
 syntax: glob
-.project
-.pydevproject
-MANIFEST
 *.pyc
 *.pyo
 *.log
 *.bak
-doc/sphinx_rtd_theme
-
-syntax: regexp
-^\.settings$
-^__pycache__$
-^Autologging.egg-info$
-^build$
-^dist$
-^doc/build$
+.project
+.settings
+.pydevproject
+__pycache__
+Autologging.egg-info
+MANIFEST
+build
+dist
+doc/build
+doc/bootswatch
+autologging-dev-env
 
