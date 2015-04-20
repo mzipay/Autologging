@@ -1,0 +1,13 @@
+*.pyc
+*.pyo
+*.log
+*.bak
+__pycache__/
+Autologging.egg-info/
+MANIFEST
+build/
+dist/
+doc/build/
+doc/bootswatch/
+autologging-dev-env/
+
