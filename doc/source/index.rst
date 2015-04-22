@@ -23,27 +23,29 @@ Table of Contents
 Download and Install
 --------------------
 
-* Use "`pip <https://pypi.python.org/pypi/pip>`_ install Autologging".
-* Download a source or built distribution from `Autologging on SourceForge
-  <http://sourceforge.net/projects/autologging/files/autologging/>`_ and run
-  either *setup.py* or the binary installer.
-* Clone the `Autologging Mercurial repository from BitBucket
-  <https://bitbucket.org/mzipay/autologging>`_ and run *setup.py*.
+The easiest way to install Autologging is to use `pip
+<https://pip.pypa.io/>`_::
 
-If you download or clone the source, the test suite can be run from the
-project root directory in either of the following ways::
+   $ pip install Autologging
 
-   python -m unittest test.suite
+To install from source, clone or fork the repository::
 
-or::
+   $ git clone https://github.com/mzipay/Autologging.git
 
-   python setup.py test
+Alternatively, download and extract a source _.zip_ or _.tar.gz_ archive from
+https://github.com/mzipay/Autologging/releases or
+https://pypi.python.org/pypi/Autologging.
 
-There are also a number of :mod:`doctest` tests embedded within Autologging's
-docstrings (written using Python 3 syntax). If you are running Python 3.2+, you
-can run the doctests like so::
+Run the test suite and install the ``autologging`` module::
 
-   python -m doctest autologging.py
+   $ cd Autologging
+   $ python setup.py test
+   $ python setup.py install
+
+You can also install from one of the available binary packages. The Python
+wheel and egg are available from https://pypi.python.org/pypi/Autologging, and
+a Windows exe/msi installer can be downloaded from
+https://sourceforge.net/projects/autologging/files/.
 
 Indices and tables
 ------------------

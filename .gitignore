@@ -9,5 +9,5 @@ build/
 dist/
 doc/build/
 doc/bootswatch/
-autologging-dev-env/
+autologging-*-env/
 
