@@ -28,14 +28,14 @@ Add a module-named logger to a class
 
        @staticmethod
        def my_staticmethod():
-           MyClass.__logger.info("my message")
+           MyClass.__log.info("my message")
 
        @classmethod
        def my_classmethod(cls):
-           cls.__logger.info("my message")
+           cls.__log.info("my message")
     
        def my_method(self):
-           self.__logger.info("my message")
+           self.__log.info("my message")
 
 >>> import logging, sys
 >>> logging.basicConfig(
@@ -68,14 +68,14 @@ Add a user-named logger to a class
 
        @staticmethod
        def my_staticmethod():
-           MyClass.__logger.info("my message")
+           MyClass.__log.info("my message")
 
        @classmethod
        def my_classmethod(cls):
-           cls.__logger.info("my message")
+           cls.__log.info("my message")
     
        def my_method(self):
-           self.__logger.info("my message")
+           self.__log.info("my message")
 
 >>> import logging, sys
 >>> logging.basicConfig(
@@ -109,10 +109,10 @@ Add a logger to a nested class
       class _Nested:
        
          def __init__(self):
-            self.__logger.info("my message")
+            self.__log.info("my message")
     
       def my_method(self):
-         self.__logger.info("my message")
+         self.__log.info("my message")
          nested = self._Nested()
 
 >>> import logging, sys
@@ -139,7 +139,7 @@ Add a module-named logger to a function
     
    @logged
    def my_function():
-       my_function._logger.info("my message")
+       my_function._log.info("my message")
 
 >>> import logging, sys
 >>> logging.basicConfig(
@@ -164,7 +164,7 @@ Add a user-named logger to a function
     
    @logged(logging.getLogger("my.app"))
    def my_function():
-       my_function._logger.info("my message")
+       my_function._log.info("my message")
 
 >>> import logging, sys
 >>> logging.basicConfig(
@@ -189,8 +189,8 @@ Add a logger to a nested function
    def my_function():
       @logged
       def nested_function():
-         nested_function._logger.info("my message")
-      my_function._logger.info("my message")
+         nested_function._log.info("my message")
+      my_function._log.info("my message")
       nested_function()
 
 >>> import logging, sys

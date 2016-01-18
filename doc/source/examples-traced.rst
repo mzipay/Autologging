@@ -1,6 +1,6 @@
-===========================================================================
-Using the ``TracedMethods`` metaclass factory and the ``@traced`` decorator
-===========================================================================
+===============================
+Using the ``@traced`` decorator
+===============================
 
 :Release: |release|
 
@@ -13,34 +13,38 @@ Using the ``TracedMethods`` metaclass factory and the ``@traced`` decorator
 * :ref:`traced-nested-function`
 
 .. warning::
-   The ``@traced`` decorator will not work as you might expect for methods of
-   a class. In general, prefer to use the ``TracedMethods`` metaclass factory
-   for tracing methods of a class, and the ``@traced`` decorator for tracing
-   functions defined outside of classes.
+   The ``@traced`` decorator will not work as you might expect when it
+   decorates a function (method) in the body of a class. In general,
+   prefer to decorate the class itself, explicitly identifying the
+   method names to trace if the default (all class, static, and instance
+   methods, excluding "__special__" methods, with the exception of
+   "__init__") doesn't suit your needs.
 
 .. _module-traced-class:
 
 Trace all methods of a class using a module-named logger
 ========================================================
 
-This is the simplest way to use :func:`autologging.TracedMethods`. All
-*non-special* methods of the class are traced to a logger that is named after
-the containing module and class. (Note: the special ``__init__`` method is an
-exception to the rule - it is traced by default if it is defined.)
+This is the simplest way to use the :func:`autologging.traced`
+decorator. All *non-special* methods of the class are traced to a logger
+that is named after the containing module and class. (Note: the special
+``__init__`` method is an exception to the rule - it is traced by
+default if it is defined.)
 
 .. note::
-   Inherited methods are **never** traced. If you want tracing for inherited
-   methods, either trace them in the super class, or override them in the
-   subclass.
+   Inherited methods are **never** traced. If you want tracing for
+   inherited methods, either trace them in the super class, or override
+   and trace them in the subclass.
 
 ::
 
    # my_module.py
 
-   from autologging import TracedMethods
+   from autologging import traced
 
 
-   class MyClass(metaclass=TracedMethods()):
+   @traced
+   class MyClass:
 
       def __init__(self):
          self._value = "ham"
@@ -68,19 +72,19 @@ exception to the rule - it is traced by default if it is defined.)
 Trace all methods of a class using a user-named logger
 ======================================================
 
-This example is identical to the above example, except that the tracing logger
-has a user-defined name ("tracing.example" in this case). Simply pass the
-user-defined logger as the first positional argument to ``TracedMethods``::
+This example is identical to the above example, except that the tracing
+logger has a user-defined name ("tracing.example" in this case). Simply
+pass the user-defined logger as the first positional argument to
+``traced``::
 
    # my_module.py
 
    import logging
-   from autologging import TracedMethods
-
-   _logger = logging.getLogger("tracing.example")
+   from autologging import traced
 
 
-   class MyClass(metaclass=TracedMethods(_logger)):
+   @traced(logging.getLogger("tracing.example"))
+   class MyClass:
 
       def __init__(self):
          self._value = "ham"
@@ -108,22 +112,25 @@ user-defined logger as the first positional argument to ``TracedMethods``::
 Trace only certain methods of a class
 =====================================
 
-The ``TracedMethods`` metaclass factory accepts a variable number of positional
-arguments. As you saw in the previous example, passing a user-defined logger as
-the first argument allows you to specify the parent logger for tracing. You may
-also pass a variable number of method names as arguments to ``TracedMethods``.
-Autologging will then trace only the methods that are named (assuming that they
-are defined in the class body). And as in the previous example, you may still
-choose whether or not to pass in a parent logger.
+The ``traced`` decorator accepts a variable number of positional string
+arguments. As you saw in the previous example, passing a user-defined
+logger as the first argument allows you to specify the parent logger for
+tracing. You may also pass a variable number of method names as
+arguments to ``traced``.
+Autologging will then trace only the methods that are named (assuming
+that they are defined in the class body). And as in the previous
+example, you may still choose whether or not to pass in a named logger
+as the *first* argument (not shown below).
 
 ::
 
    # my_module.py
 
-   from autologging import TracedMethods
+   from autologging import traced
 
 
-   class MyClass(metaclass=TracedMethods("my_method", "__eq__")):
+   @traced("my_method", "__eq__")
+   class MyClass:
 
       def __init__(self):
          self._value = "ham"
@@ -156,16 +163,18 @@ choose whether or not to pass in a parent logger.
 Trace a nested class
 ====================
 
-Tracing a nested class is no different than tracing a top-level class::
+Tracing a nested class is no different than tracing a module-level
+class::
 
    # my_module.py
 
-   from autologging import TracedMethods
+   from autologging import traced
 
 
    class MyClass:
 
-      class Nested(metaclass=TracedMethods()):
+      @traced
+      class Nested:
 
          def do_something(self):
             pass
@@ -174,6 +183,8 @@ Tracing a nested class is no different than tracing a top-level class::
    Under Python 3.3+, Autologging will use a class's qualified name
    (:pep:`3155`) when creating loggers. In this example, the tracing
    log entries will be logged using the name "my_module.MyClass.Nested".
+   (Under versions of Python <3.3, where "__qualname__" is not
+   available, the logger name would be simply "my_module.Nested".)
 
 ::
 

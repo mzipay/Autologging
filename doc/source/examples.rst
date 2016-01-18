@@ -11,4 +11,5 @@ Examples of using ``autologging``
    examples-traced
    examples-logged-and-traced
    examples-inheritance
+   examples-separate
 

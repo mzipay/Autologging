@@ -1,6 +1,6 @@
-==============================================================
-Using ``@logged``, ``TracedMethods``, and ``@traced`` together
-==============================================================
+==========================================
+Using ``@logged`` and ``@traced`` together
+==========================================
 
 :Release: |release|
 
@@ -16,14 +16,15 @@ Add logging and tracing to a class
 
    # my_module.py
 
-   from autologging import logged, TracedMethods
+   from autologging import logged, traced
 
 
    @logged
-   class MyClass(metaclass=TracedMethods())
+   @traced
+   class MyClass:
 
       def __init__(self, value):
-         self.__logger.info("I like %s.", value)
+         self.__log.info("I like %s.", value)
          self._value = value
 
       def my_method(self, arg, keyword=None):
@@ -51,14 +52,14 @@ Add logging and tracing to a function
 =====================================
 
 .. warning::
-   Although the ``@logged`` and ``@traced`` decorators will "do the right
-   thing" regardless of the order in which they are applied to the same
-   function, it is recommended that ``@logged`` always be used as the innermost
-   decorator.
+   Although the ``@logged`` and ``@traced`` decorators will "do the
+   right thing" regardless of the order in which they are applied to the
+   same function, it is recommended that ``@logged`` always be used as
+   the innermost decorator.
 
-   This is because ``@logged`` simply sets the ``_logger`` attribute and then
-   returns the original function, making it "safe" to use in combination with
-   any other decorator.
+   This is because ``@logged`` simply sets the logger member and then
+   returns the original function, making it safe to use in combination
+   with any other decorator.
 
 ::
 
@@ -70,7 +71,7 @@ Add logging and tracing to a function
    @traced
    @logged
    def my_function(arg, keyword=None):
-      my_function._logger.info("my message")
+      my_function._log.info("my message")
       return "%s and %s" % (arg, keyword)
 
 ::
