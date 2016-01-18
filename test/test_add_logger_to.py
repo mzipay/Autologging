@@ -20,26 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Test case and runner for the :func:`autologging.logged` decorator
-function.
+"""Test case and runner for :func:`autologging._add_logger_to`."""
 
-"""
-
-__author__ = (
-    "Matthew Zipay <mattz@ninthtest.net>, "
-    "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
-__version__ = "0.4.0"
+__author__ = "Matthew Zipay <mattz@ninthtest.net>"
+__version__ = "1.0.0"
 
 import logging
-import os
 import unittest
 
-from autologging import logged
+from autologging import _add_logger_to
 
 from test import named_logger
-
-# suppress messages to the console
-logging.getLogger().setLevel(logging.FATAL + 1)
 
 
 class SampleClass(object):
@@ -50,8 +41,8 @@ def sample_function():
     pass
 
 
-class LoggedTest(unittest.TestCase):
-    """Test the :func:`autologging.logged` decorator function."""
+class AddLoggerToTest(unittest.TestCase):
+    """Test the :func:`autologging._add_logger_to` function."""
 
     def tearDown(self):
         if hasattr(SampleClass, "_SampleClass__log"):
@@ -59,33 +50,30 @@ class LoggedTest(unittest.TestCase):
         if hasattr(sample_function, "_log"):
             delattr(sample_function, "_log")
 
-    def test_logged_class_uses_default_logger(self):
-        logged(SampleClass)
-
+    def test_add_default_logger_to_class(self):
+        self.assertFalse(hasattr(SampleClass, "_SampleClass__log"))
+        _add_logger_to(SampleClass)
         self.assertEqual(
-            __name__ + ".SampleClass", SampleClass._SampleClass__log.name)
+            "%s.SampleClass" % __name__, SampleClass._SampleClass__log.name)
 
-    def test_logged_class_uses_named_logger(self):
-        logged(named_logger)(SampleClass)
+    def test_add_named_logger_to_class(self):
+        self.assertFalse(hasattr(SampleClass, "_SampleClass__log"))
+        _add_logger_to(SampleClass, logger_name = named_logger.name)
+        self.assertEqual(named_logger.name, SampleClass._SampleClass__log.name)
 
-        self.assertEqual(
-            named_logger.name + ".SampleClass",
-            SampleClass._SampleClass__log.name)
-
-    def test_logged_function_uses_default_logger(self):
-        logged(sample_function)
-
+    def test_add_default_logger_to_function(self):
+        self.assertFalse(hasattr(sample_function, "_log"))
+        _add_logger_to(sample_function)
         self.assertEqual(__name__, sample_function._log.name)
 
-    def test_logged_class_uses_named_logger(self):
-        logged(named_logger)(sample_function)
-
+    def test_add_named_logger_to_function(self):
+        self.assertFalse(hasattr(sample_function, "_log"))
+        _add_logger_to(sample_function, logger_name = named_logger.name)
         self.assertEqual(named_logger.name, sample_function._log.name)
 
 
 def suite():
-    return unittest.makeSuite(LoggedTest)
-
+    return unittest.makeSuite(AddLoggerToTest)
 
 if __name__ == "__main__":
     unittest.TextTestRunner().run(suite())
