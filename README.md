@@ -54,7 +54,8 @@ can be configured and controlled independently of application logging.
 
 ## Installation
 
-The easiest way to install Autologging is to use [pip](https://pip.pypa.io/):
+The easiest way to install Autologging is to use
+[pip](https://pip.pypa.io/):
 
 ```bash
 $ pip install Autologging
@@ -68,8 +69,8 @@ Clone or fork the repository:
 $ git clone https://github.com/mzipay/Autologging.git
 ```
 
-Alternatively, download and extract a source _.zip_ or _.tar.gz_ archive from
-https://github.com/mzipay/Autologging/releases or
+Alternatively, download and extract a source .zip or .tar.gz archive
+from https://github.com/mzipay/Autologging/releases or
 https://pypi.python.org/pypi/Autologging.
 
 Run the test suite and install the `autologging` module:
@@ -82,12 +83,10 @@ $ python setup.py install
 
 ### Binary installation
 
-Download the Python wheel (_.whl_) or _.egg_ from
-https://pypi.python.org/pypi/Autologging, or an _.exe_/_.msi_ Windows installer
-from https://sourceforge.net/projects/autologging/files/.
+Download the Python wheel (.whl) from
+https://pypi.python.org/pypi/Autologging, or an .exe/.msi Windows
+installer from https://sourceforge.net/projects/autologging/files/.
 
-Use [pip](https://pip.pypa.io/) or
-[wheel](https://pypi.python.org/pypi/wheel) to install the _.whl_;
-[setuptools](https://pypi.python.org/pypi/setuptools) to install an
-_.egg_; or run the Windows installer.
+(Use [pip](https://pip.pypa.io/) or
+[wheel](https://pypi.python.org/pypi/wheel) to install the .whl.)
 

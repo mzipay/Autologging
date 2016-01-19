@@ -64,7 +64,7 @@ To install from source, clone or fork the repository::
 
    $ git clone https://github.com/mzipay/Autologging.git
 
-Alternatively, download and extract a source _.zip_ or _.tar.gz_ archive
+Alternatively, download and extract a source .zip or .tar.gz archive
 from https://github.com/mzipay/Autologging/releases or
 https://pypi.python.org/pypi/Autologging.
 
@@ -74,10 +74,8 @@ Run the test suite and install the ``autologging`` module::
    $ python setup.py test
    $ python setup.py install
 
-You can also install from one of the available binary packages. The
-Python wheel and egg are available from
-https://pypi.python.org/pypi/Autologging, and a Windows exe/msi
-installer can be downloaded from
+You can also install from one of the available binary packages
+available at https://pypi.python.org/pypi/Autologging or
 https://sourceforge.net/projects/autologging/files/.
 
 Indices and tables
