@@ -54,8 +54,6 @@ can be configured and controlled independently of application logging.
 
 ## Installation
 
-[![Wheel Status](https://pypip.in/wheel/Autologging/badge.svg)](https://pypi.python.org/pypi/Autologging/)
-
 The easiest way to install Autologging is to use [pip](https://pip.pypa.io/):
 
 ```bash
