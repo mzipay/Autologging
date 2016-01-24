@@ -2,6 +2,8 @@
 *.pyo
 *.log
 *.bak
+*.swp
+*.class
 __pycache__/
 Autologging.egg-info/
 MANIFEST
@@ -10,4 +12,5 @@ dist/
 doc/build/
 doc/bootswatch/
 autologging-*-env/
+NOTES.txt
 

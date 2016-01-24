@@ -889,17 +889,21 @@ def _find_last_line_number(f_code):
 
     """
     last_line_number = f_code.co_firstlineno
-    # co_lnotab is a sequence of 2-byte offsets
-    # (address offset, line number offset), each relative to the previous;
-    # we only care about the line number offsets here, so start at index 1
-    # and increment by 2
-    i = 1
-    while i < len(f_code.co_lnotab):
-        # co_lnotab is bytes in Python 3, but str in Python 2
-        last_line_number += (
-            f_code.co_lnotab[i] if _is_py3
-            else ord(f_code.co_lnotab[i]))
-        i += 2
+
+    # Jython does not have co_lnotab
+    if hasattr(f_code, "co_lnotab"):
+        # co_lnotab is a sequence of 2-byte offsets
+        # (address offset, line number offset), each relative to the previous;
+        # we only care about the line number offsets here, so start at index 1
+        # and increment by 2
+        i = 1
+        while i < len(f_code.co_lnotab):
+            # co_lnotab is bytes in Python 3, but str in Python 2
+            last_line_number += (
+                f_code.co_lnotab[i] if _is_py3
+                else ord(f_code.co_lnotab[i]))
+            i += 2
+
     return last_line_number
 
 

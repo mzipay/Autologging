@@ -36,6 +36,7 @@ from autologging import TRACE
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
+    is_jython,
     list_handler,
     named_tracer,
 )
@@ -65,7 +66,9 @@ class _TracedFunctionalTest(unittest.TestCase):
             expected_args, marker):
         self.__assert_trace_record(
             return_record, traced_function, expected_logger_name, "RETURN %r",
-            expected_args, get_dummy_lineno("#%s:LN" % marker))
+            expected_args,
+            get_dummy_lineno(
+                ("#%s:LN" if not is_jython else "#%s:L1") % marker))
 
     def __assert_trace_record(
             self, trace_record, traced_function, expected_logger_name,
@@ -173,7 +176,8 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
                 __dict__["method"].__wrapped__)
         expected_logger_name = "traced.testing.%s" % getattr(
             TracedClass._TracedClass__InternalNestedClass, "__qualname__",
-            "__InternalNestedClass")
+            "__InternalNestedClass" if not is_jython
+                else "_TracedClass__InternalNestedClass")
         self._assert_call_record(
             list_handler.records[0], traced_function, expected_logger_name,
             ((None,), dict()), "TC.__INC.m")

@@ -28,17 +28,22 @@ __version__ = "1.0.0"
 from functools import partial
 import logging
 import os
+import sys
 import unittest
+
 from autologging import TRACE
 
 __all__ = [
     "dummy_module_logger",
     "get_dummy_lineno",
+    "is_jython",
     "list_handler",
     "named_logger",
     "named_tracer",
     "suite",
 ]
+
+is_jython = hasattr(sys, "JYTHON_JAR")
 
 
 def get_dummy_lineno(marker):

@@ -32,6 +32,8 @@ import unittest
 
 from autologging import _create_log_record_factories
 
+from test import is_jython
+
 
 class SampleClass(object):
     
@@ -40,8 +42,10 @@ class SampleClass(object):
 
 
 _func = SampleClass.__dict__["method"]
-_expected_call_args = (__name__, "method", _func.__code__.co_filename, 38)
-_expected_return_args = (__name__, "method", _func.__code__.co_filename, 39)
+_expected_call_args = (__name__, "method", _func.__code__.co_filename, 40)
+_expected_return_args = (
+    __name__, "method", _func.__code__.co_filename,
+    41 if not is_jython else 40)
 
 
 class CreateLogRecordFactoriesTest(unittest.TestCase):

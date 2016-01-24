@@ -35,6 +35,7 @@ import unittest
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
+    is_jython,
     list_handler,
     named_logger,
 )
@@ -117,7 +118,8 @@ class LoggedClassFunctionalTest(_LoggedFunctionalTest):
 
         expected_logger_name = "logged.testing.%s" % getattr(
             LoggedClass._LoggedClass__InternalNestedClass, "__qualname__",
-            "__InternalNestedClass")
+            "__InternalNestedClass" if not is_jython
+                else "_LoggedClass__InternalNestedClass")
         self._assert_log_record(
             list_handler.records[0],
             LoggedClass._LoggedClass__InternalNestedClass.__dict__["__init__"],

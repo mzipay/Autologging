@@ -32,6 +32,8 @@ import unittest
 
 from autologging import _find_last_line_number
 
+from test import is_jython
+
 
 def sample_function():
     x = "test"
@@ -49,11 +51,13 @@ class FindLastLineNumberTest(unittest.TestCase):
     """Test the :func:`autologging._find_last_line_number` function."""
 
     def test_finds_last_line_number_of_function(self):
-        self.assertEqual(38, _find_last_line_number(sample_function.__code__))
+        self.assertEqual(
+            40 if not is_jython else 38,
+            _find_last_line_number(sample_function.__code__))
 
     def test_finds_last_line_number_of_method(self):
         self.assertEqual(
-            45,
+            47 if not is_jython else 45,
             _find_last_line_number(SampleClass.__dict__["method"].__code__))
 
 
