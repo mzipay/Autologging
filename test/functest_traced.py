@@ -36,7 +36,8 @@ from autologging import TRACE
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
-    is_jython,
+    has_co_lnotab,
+    is_ironpython,
     list_handler,
     named_tracer,
 )
@@ -68,7 +69,7 @@ class _TracedFunctionalTest(unittest.TestCase):
             return_record, traced_function, expected_logger_name, "RETURN %r",
             expected_args,
             get_dummy_lineno(
-                ("#%s:LN" if not is_jython else "#%s:L1") % marker))
+                ("#%s:LN" if has_co_lnotab else "#%s:L1") % marker))
 
     def __assert_trace_record(
             self, trace_record, traced_function, expected_logger_name,
@@ -78,10 +79,13 @@ class _TracedFunctionalTest(unittest.TestCase):
         self.assertEqual(expected_args, trace_record.args)
         self.assertEqual("TRACE", trace_record.levelname)
         self.assertEqual(TRACE, trace_record.levelno)
-        self.assertEqual(
-            traced_function.__code__.co_filename, trace_record.pathname)
-        self.assertEqual(expected_lineno, trace_record.lineno)
-        self.assertEqual(traced_function.__name__, trace_record.funcName)
+        # IronPython doesn't handle frames or code objects fully (even with
+        # -X:FullFrames)
+        if not is_ironpython:
+            self.assertEqual(
+                traced_function.__code__.co_filename, trace_record.pathname)
+            self.assertEqual(expected_lineno, trace_record.lineno)
+            self.assertEqual(traced_function.__name__, trace_record.funcName)
 
 
 class TracedClassFunctionalTest(_TracedFunctionalTest):
@@ -176,8 +180,7 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
                 __dict__["method"].__wrapped__)
         expected_logger_name = "traced.testing.%s" % getattr(
             TracedClass._TracedClass__InternalNestedClass, "__qualname__",
-            "__InternalNestedClass" if not is_jython
-                else "_TracedClass__InternalNestedClass")
+            TracedClass._TracedClass__InternalNestedClass.__name__)
         self._assert_call_record(
             list_handler.records[0], traced_function, expected_logger_name,
             ((None,), dict()), "TC.__INC.m")

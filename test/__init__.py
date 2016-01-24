@@ -28,22 +28,27 @@ __version__ = "1.0.0"
 from functools import partial
 import logging
 import os
-import sys
 import unittest
 
 from autologging import TRACE
 
+try:
+    import clr
+    clr.AddReference("System")
+    is_ironpython = True
+except:
+    is_ironpython = False
+
 __all__ = [
     "dummy_module_logger",
     "get_dummy_lineno",
-    "is_jython",
+    "has_co_lnotab",
+    "is_ironpython",
     "list_handler",
     "named_logger",
     "named_tracer",
     "suite",
 ]
-
-is_jython = hasattr(sys, "JYTHON_JAR")
 
 
 def get_dummy_lineno(marker):
@@ -53,6 +58,9 @@ def get_dummy_lineno(marker):
         for (i, line) in enumerate(fp):
             if marker in line:
                 return i + 1
+
+
+has_co_lnotab = hasattr(get_dummy_lineno.__code__, "co_lnotab")
 
 
 class _ListHandler(logging.Handler):

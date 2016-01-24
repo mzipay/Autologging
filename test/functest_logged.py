@@ -35,7 +35,7 @@ import unittest
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
-    is_jython,
+    is_ironpython,
     list_handler,
     named_logger,
 )
@@ -60,11 +60,14 @@ class _LoggedFunctionalTest(unittest.TestCase):
         self.assertEqual(tuple(), info_record.args)
         self.assertEqual("INFO", info_record.levelname)
         self.assertEqual(logging.INFO, info_record.levelno)
-        self.assertEqual(
-            logged_function.__code__.co_filename, info_record.pathname)
-        self.assertEqual(
-            get_dummy_lineno(expected_message), info_record.lineno)
-        self.assertEqual(logged_function.__name__, info_record.funcName)
+        # IronPython doesn't handle frames or code objects fully (even with
+        # -X:FullFrames)
+        if not is_ironpython:
+            self.assertEqual(
+                logged_function.__code__.co_filename, info_record.pathname)
+            self.assertEqual(
+                get_dummy_lineno(expected_message), info_record.lineno)
+            self.assertEqual(logged_function.__name__, info_record.funcName)
 
 
 class LoggedClassFunctionalTest(_LoggedFunctionalTest):
@@ -118,8 +121,7 @@ class LoggedClassFunctionalTest(_LoggedFunctionalTest):
 
         expected_logger_name = "logged.testing.%s" % getattr(
             LoggedClass._LoggedClass__InternalNestedClass, "__qualname__",
-            "__InternalNestedClass" if not is_jython
-                else "_LoggedClass__InternalNestedClass")
+            LoggedClass._LoggedClass__InternalNestedClass.__name__)
         self._assert_log_record(
             list_handler.records[0],
             LoggedClass._LoggedClass__InternalNestedClass.__dict__["__init__"],

@@ -890,7 +890,7 @@ def _find_last_line_number(f_code):
     """
     last_line_number = f_code.co_firstlineno
 
-    # Jython does not have co_lnotab
+    # Jython and IronPython do not have co_lnotab
     if hasattr(f_code, "co_lnotab"):
         # co_lnotab is a sequence of 2-byte offsets
         # (address offset, line number offset), each relative to the previous;

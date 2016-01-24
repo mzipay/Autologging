@@ -36,7 +36,6 @@ from autologging import TRACE
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
-    is_jython,
     list_handler,
     named_logger,
     named_tracer,
@@ -168,8 +167,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         expected_logger_name = "logged.testing.%s" % getattr(
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass,
             "__qualname__",
-            "__InternalNestedClass" if not is_jython
-                else "_LoggedAndTracedClass__InternalNestedClass")
+            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
         self._assert_log_record(
             list_handler.records[0], init_function, expected_logger_name,
             "LATC.__INC.__i__")
@@ -187,8 +185,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         qualname = getattr(
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass,
             "__qualname__",
-            "__InternalNestedClass" if not is_jython
-                else "_LoggedAndTracedClass__InternalNestedClass")
+            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
         expected_tracer_name = "traced.testing.%s" % qualname
         expected_logger_name = "logged.testing.%s" % qualname
         self._assert_call_record(
@@ -215,8 +212,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         expected_logger_name = "logged.testing.%s" % getattr(
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass,
             "__qualname__",
-            "__InternalNestedClass" if not is_jython
-                else "_LoggedAndTracedClass__InternalNestedClass")
+            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
         self._assert_log_record(
             list_handler.records[1], wrapped_function, expected_logger_name,
             "LATC.__INC.m")
@@ -235,8 +231,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         expected_tracer_name = "traced.testing.%s" % getattr(
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass,
             "__qualname__",
-            "__InternalNestedClass" if not is_jython
-                else "_LoggedAndTracedClass__InternalNestedClass")
+            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
         self._assert_call_record(
             list_handler.records[0], wrapped_function, expected_tracer_name,
             ((None,), dict()), "LATC.__INC.m")
