@@ -23,14 +23,13 @@
 """Utilities for Autologging unit and functional tests."""
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 from functools import partial
 import logging
 import os
 import unittest
 
-from autologging import TRACE
+from autologging import TRACE, __version__
 
 try:
     import clr
@@ -108,10 +107,7 @@ def suite():
         test_make_traceable_instancemethod,
         test_make_traceable_classmethod,
         test_make_traceable_staticmethod,
-        test_create_log_record_factories,
-        test_make_call_record,
-        test_find_last_line_number,
-        test_make_return_record,
+        test_TracingLoggerDelegator,
         functest_logged,
         functest_traced,
         functest_traced_subclassing,
@@ -134,10 +130,7 @@ def suite():
     suite.addTest(test_make_traceable_instancemethod.suite())
     suite.addTest(test_make_traceable_classmethod.suite())
     suite.addTest(test_make_traceable_staticmethod.suite())
-    suite.addTest(test_create_log_record_factories.suite())
-    suite.addTest(test_make_call_record.suite())
-    suite.addTest(test_find_last_line_number.suite())
-    suite.addTest(test_make_return_record.suite())
+    suite.addTest(test_TracingLoggerDelegator.suite())
     suite.addTest(functest_logged.suite())
     suite.addTest(functest_traced.suite())
     suite.addTest(functest_traced_subclassing.suite())

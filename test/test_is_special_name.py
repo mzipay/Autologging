@@ -23,11 +23,10 @@
 """Test case and runner for :func:`autologging._is_special_name`."""
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import unittest
 
-from autologging import _is_special_name
+from autologging import _is_special_name, __version__
 
 
 class IsSpecialNameTest(unittest.TestCase):

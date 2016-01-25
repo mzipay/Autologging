@@ -26,12 +26,11 @@
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import unittest
 import warnings
 
-from autologging import _get_traceable_method_names
+from autologging import _get_traceable_method_names, __version__
 
 
 class Parent(object):

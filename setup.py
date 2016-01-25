@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="Autologging",
-    version="1.0.0",
+    version="1.0.1",
     description="Autologging makes logging and tracing Python classes easy.",
     long_description="""\
 Autologging eliminates boilerplate logging setup code and tracing code,
@@ -66,6 +66,11 @@ can be configured and controlled independently of application logging.
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Programming Language :: Python :: Implementation :: Stackless",
+        "Programming Language :: Python :: Implementation :: Jython",
+        "Programming Language :: Python :: Implementation :: IronPython",
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: System :: Logging",

@@ -26,12 +26,11 @@ decorator function.
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import logging
 import unittest
 
-from autologging import TRACE
+from autologging import TRACE, __version__
 
 from test import (
     dummy_module_logger,
@@ -150,7 +149,7 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
     def test_nested_classes_have_qualname_logger_name(self):
         self.assertEqual(
             "test.dummy.TracedClass.NestedClass",
-            TracedClass.NestedClass.__dict__["__init__"]._log.name)
+            TracedClass.NestedClass.__dict__["__init__"]._trace_log_delegator.name)
 
     def test_nested_class_instance_method_tracing_log_records(self):
         obj = TracedClass.NestedClass()

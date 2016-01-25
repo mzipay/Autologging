@@ -28,13 +28,12 @@ function.
 __author__ = (
     "Matthew Zipay <mattz@ninthtest.net>, "
     "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
-__version__ = "0.4.0"
 
 import logging
 import os
 import unittest
 
-from autologging import logged
+from autologging import logged, __version__
 
 from test import named_logger
 

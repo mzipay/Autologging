@@ -26,12 +26,11 @@
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import unittest
 import warnings
 
-from autologging import _install_traceable_methods
+from autologging import _install_traceable_methods, __version__
 
 from test import named_logger
 
@@ -165,7 +164,8 @@ class InstallTraceableMethodsTest(unittest.TestCase):
                 "static_method"]:
             descriptor = SampleClass.__dict__[traced_method_name]
             self.assertEqual(
-                "%s.SampleClass" % __name__, descriptor.__func__._log.name)
+                "%s.SampleClass" % __name__,
+                descriptor.__func__._trace_log_delegator.name)
 
         for traced_method_name in [
                 "__init__",
@@ -173,7 +173,9 @@ class InstallTraceableMethodsTest(unittest.TestCase):
                 "_nonpublic",
                 "_SampleClass__internal"]:
             descriptor = SampleClass.__dict__[traced_method_name]
-            self.assertEqual("%s.SampleClass" % __name__, descriptor._log.name)
+            self.assertEqual(
+                "%s.SampleClass" % __name__,
+                descriptor._trace_log_delegator.name)
 
     def test_traces_with_named_logger(self):
         _install_traceable_methods(SampleClass, logger=named_logger)
@@ -182,7 +184,9 @@ class InstallTraceableMethodsTest(unittest.TestCase):
                 "class_method",
                 "static_method"]:
             descriptor = SampleClass.__dict__[traced_method_name]
-            self.assertEqual(named_logger.name, descriptor.__func__._log.name)
+            self.assertEqual(
+                named_logger.name,
+                descriptor.__func__._trace_log_delegator.name)
 
         for traced_method_name in [
                 "__init__",
@@ -190,7 +194,9 @@ class InstallTraceableMethodsTest(unittest.TestCase):
                 "_nonpublic",
                 "_SampleClass__internal"]:
             descriptor = SampleClass.__dict__[traced_method_name]
-            self.assertEqual(named_logger.name, descriptor._log.name)
+            self.assertEqual(
+                named_logger.name,
+                descriptor._trace_log_delegator.name)
 
 
 def suite():

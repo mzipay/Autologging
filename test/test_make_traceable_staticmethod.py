@@ -26,7 +26,6 @@
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import logging
 import unittest
@@ -35,6 +34,7 @@ from autologging import (
     _generate_logger_name,
     _make_traceable_staticmethod,
     TRACE,
+    __version__,
 )
 
 from test import list_handler, named_tracer
@@ -85,7 +85,8 @@ class MakeTraceableStaticmethodTest(unittest.TestCase):
         proxy = _make_traceable_staticmethod(
             SampleClass, SampleClass.__dict__["method"], named_tracer)
 
-        self.assertTrue(proxy.__func__._log is named_tracer)
+        self.assertTrue(
+            proxy.__func__._trace_log_delegator._logger is named_tracer)
 
     def test_with_trace_enabled_emits_log_records(self):
         named_tracer.setLevel(TRACE)

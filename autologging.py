@@ -23,7 +23,7 @@
 __author__ = (
     "Matthew Zipay <mattz@ninthtest.net>, "
     "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 from functools import partial, wraps
 from inspect import isclass, isroutine
@@ -166,6 +166,29 @@ def logged(obj):
        This is because ``@logged`` simply sets the ``_log`` attribute
        and then returns the original function, making it "safe" to use
        in combination with any other decorator.
+
+    .. note::
+       Both `Jython <http://www.jython.org/>`_ and
+       `IronPython <http://ironpython.net/>`_ report an "internal" class
+       name using its mangled form, which will be reflected in the
+       default logger name.
+
+       For example, in the sample code below, both Jython and IronPython
+       will use the default logger name "autologging._Outer__Nested"
+       (whereas CPython/PyPy/Stackless would use "autologging.__Nested"
+       under Python 2 or "autologging.Outer.__Nested" under Python 3.3+)
+       ::
+
+          class Outer:
+             @logged
+             class __Nested:
+                pass
+
+    .. warning::
+       `IronPython <http://ironpython.net/>`_ does not fully support
+       frames (even with the -X:FullFrames option), so you are likely to
+       see things like misreported line numbers and "<unknown file>" in
+       log records emitted when running under IronPython.
 
     """
     if isinstance(obj, logging.Logger): # `@logged(logger)'
@@ -442,6 +465,32 @@ def traced(*args):
        and the function is traced as though the method names had not
        been specified.
 
+    .. note::
+       Both `Jython <http://www.jython.org/>`_ and
+       `IronPython <http://ironpython.net/>`_ report an "internal" class
+       name using its mangled form, which will be reflected in the
+       default tracing logger name.
+
+       For example, in the sample code below, both Jython and IronPython
+       will use the default tracing logger name
+       "autologging._Outer__Nested" (whereas CPython/PyPy/Stackless
+       would use "autologging.__Nested" under Python 2 or
+       "autologging.Outer.__Nested" under Python 3.3+)::
+
+          class Outer:
+             @traced
+             class __Nested:
+                pass
+
+    .. warning::
+       Neither `Jython <http://www.jython.org/>`_ nor
+       `IronPython <http://ironpython.net/>`_ currently implement the
+       ``function.__code__.co_lnotab`` attribute, so the last line
+       number of a function cannot be determined by Autologging.
+       As a result, the line number reported in tracing RETURN log
+       records will actually be the line number on which the function is
+       defined.
+
     """
     obj = args[0] if args else None
     if obj is None:
@@ -526,24 +575,24 @@ def _make_traceable_function(function, logger):
              and return tracing
 
     """
-    make_call_record, make_return_record = _create_log_record_factories(
-        logger.name, function)
+    log_delegator = _TracingLoggerDelegator(logger, function)
 
     @wraps(function)
     def autologging_traced_function_proxy(*args, **keywords):
-        trace_log = autologging_traced_function_proxy._trace_log
-        if trace_log.isEnabledFor(TRACE):
-            trace_log.handle(make_call_record(args, keywords))
-            return_value = function(*args, **keywords)
-            trace_log.handle(make_return_record(return_value))
-            return return_value
+        # don't access from closure (IronPython does not manage
+        # co_freevars/__closure__ correctly)
+        log_delegator = autologging_traced_function_proxy._trace_log_delegator
+        if log_delegator.isEnabledFor(TRACE):
+            log_delegator.trace_call(args, keywords)
+            value = function(*args, **keywords)
+            log_delegator.trace_return(value)
+            return value
         else:
             return function(*args, **keywords)
 
-    # we don't use @logged(logger) in this case because then a function that
-    # was both @logged and @traced (in either order) would have the _log member
-    # overwritten by the outermost decorator
-    autologging_traced_function_proxy._trace_log = logger
+    # NOT a logging.Logger subclass, but does implement read-only properties
+    # and methods that mimic the public logging.Logger interface
+    autologging_traced_function_proxy._trace_log_delegator = log_delegator
 
     if not hasattr(autologging_traced_function_proxy, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
@@ -715,21 +764,27 @@ def _make_traceable_instancemethod(class_, method_descriptor, logger):
     # functions have a __get__ method; they can act as descriptors
     function = method_descriptor
 
-    make_call_record, make_return_record = _create_log_record_factories(
-        logger.name, function)
+    log_delegator = _TracingLoggerDelegator(logger, function)
 
     @wraps(function)
-    @logged(logger)
     def autologging_traced_instancemethod_proxy(f_self, *args, **keywords):
         method = method_descriptor.__get__(f_self, f_self.__class__)
-        log = autologging_traced_instancemethod_proxy._log
-        if log.isEnabledFor(TRACE):
-            log.handle(make_call_record(args, keywords))
-            return_value = method(*args, **keywords)
-            log.handle(make_return_record(return_value))
-            return return_value
+        # don't access from closure (IronPython does not manage
+        # co_freevars/__closure__ correctly)
+        log_delegator = \
+            autologging_traced_instancemethod_proxy._trace_log_delegator
+        if log_delegator.isEnabledFor(TRACE):
+            log_delegator.trace_call(args, keywords)
+            value = method(*args, **keywords)
+            log_delegator.trace_return(value)
+            return value
         else:
             return method(*args, **keywords)
+
+    # NOT a logging.Logger subclass, but does implement read-only properties
+    # and methods that mimic the public logging.Logger interface
+    autologging_traced_instancemethod_proxy._trace_log_delegator = \
+        log_delegator
 
     if not hasattr(autologging_traced_instancemethod_proxy, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
@@ -761,21 +816,26 @@ def _make_traceable_classmethod(class_, method_descriptor, logger):
     """
     function = method_descriptor.__func__
 
-    make_call_record, make_return_record = _create_log_record_factories(
-        logger.name, function)
+    log_delegator = _TracingLoggerDelegator(logger, function)
 
     @wraps(function)
-    @logged(logger)
     def autologging_traced_classmethod_proxy(f_cls, *args, **keywords):
         method = method_descriptor.__get__(None, f_cls)
-        log = autologging_traced_classmethod_proxy._log
-        if log.isEnabledFor(TRACE):
-            log.handle(make_call_record(args, keywords))
-            return_value = method(*args, **keywords)
-            log.handle(make_return_record(return_value))
-            return return_value
+        # don't access from closure (IronPython does not manage
+        # co_freevars/__closure__ correctly)
+        log_delegator = \
+            autologging_traced_classmethod_proxy._trace_log_delegator
+        if log_delegator.isEnabledFor(TRACE):
+            log_delegator.trace_call(args, keywords)
+            value = method(*args, **keywords)
+            log_delegator.trace_return(value)
+            return value
         else:
             return method(*args, **keywords)
+
+    # NOT a logging.Logger subclass, but does implement read-only properties
+    # and methods that mimic the public logging.Logger interface
+    autologging_traced_classmethod_proxy._trace_log_delegator = log_delegator
 
     if not hasattr(autologging_traced_classmethod_proxy, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
@@ -807,20 +867,25 @@ def _make_traceable_staticmethod(class_, method_descriptor, logger):
     """
     function = method_descriptor.__func__
 
-    make_call_record, make_return_record = _create_log_record_factories(
-        logger.name, function)
+    log_delegator = _TracingLoggerDelegator(logger, function)
 
     @wraps(function)
-    @logged(logger)
     def autologging_traced_staticmethod_proxy(*args, **keywords):
-        log = autologging_traced_staticmethod_proxy._log
-        if log.isEnabledFor(TRACE):
-            log.handle(make_call_record(args, keywords))
-            return_value = function(*args, **keywords)
-            log.handle(make_return_record(return_value))
-            return return_value
+        # don't access from closure (IronPython does not manage
+        # co_freevars/__closure__ correctly)
+        log_delegator = \
+            autologging_traced_staticmethod_proxy._trace_log_delegator
+        if log_delegator.isEnabledFor(TRACE):
+            log_delegator.trace_call(args, keywords)
+            value = function(*args, **keywords)
+            log_delegator.trace_return(value)
+            return value
         else:
             return function(*args, **keywords)
+
+    # NOT a logging.Logger subclass, but does implement read-only properties
+    # and methods that mimic the public logging.Logger interface
+    autologging_traced_staticmethod_proxy._trace_log_delegator = log_delegator
 
     if not hasattr(autologging_traced_staticmethod_proxy, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
@@ -831,97 +896,156 @@ def _make_traceable_staticmethod(class_, method_descriptor, logger):
     return staticmethod(autologging_traced_staticmethod_proxy)
 
 
-def _create_log_record_factories(channel, function):
-    """Create factory functions that create :class:`logging.LogRecord`
-    objects for call and return tracing.
-
-    :param str channel: the logging channel to which tracing log entries
-                        will be emitted
-    :param function: the traced function
-    :return: a 2-tuple containing the factory functions for creating
-             call and return log records for *function* (respectively)
+class _TracingLoggerDelegator(object):
+    """Build CALL/RETURN log records and delegate logging to a specified
+    tracing logger.
 
     """
-    f_code = function.__code__
-    make_call_record = partial(
-        _make_call_record, channel, function.__name__, f_code.co_filename,
-        f_code.co_firstlineno)
-    make_return_record = partial(
-        _make_return_record, channel, function.__name__, f_code.co_filename,
-        _find_last_line_number(f_code))
-    return (make_call_record, make_return_record)
 
+    @staticmethod
+    def _find_last_line_number(f_code):
+        """Return the last line number of a function.
 
-def _make_call_record(
-        channel, f_name, f_filename, f_lineno, f_args, f_keywords):
-    """Create the log record for a function call.
+        :param types.CodeType f_code: the bytecode object for a
+                                      function, as obtained from
+                                      ``function.__code__``
+        :return: the last physical line number of the function
+        :rtype: int
 
-    :param str channel: the logging channel to which tracing log entries
-                        will be emitted
-    :param str f_name: the name of the traced function
-    :param str f_filename: the filename in which the traced function is
-                           defined
-    :param int f_lineno: the line number in *f_filename* where the
-                         traced function is defined
-    :param tuple f_args: the positional arguments that were sent to
-                         the traced function
-    :param dict f_keywords: the keyword arguments that were sent to
-                            the traced function
-    :rtype: logging.LogRecord
+        """
+        last_line_number = f_code.co_firstlineno
 
-    """
-    return logging.LogRecord(
-        channel, TRACE, f_filename, f_lineno, "CALL *%r **%r",
-        (f_args, f_keywords), None, func=f_name)
+        # Jython and IronPython do not have co_lnotab
+        if hasattr(f_code, "co_lnotab"):
+            # co_lnotab is a sequence of 2-byte offsets
+            # (address offset, line number offset), each relative to the
+            # previous; we only care about the line number offsets here, so
+            # start at index 1 and increment by 2
+            i = 1
+            while i < len(f_code.co_lnotab):
+                # co_lnotab is bytes in Python 3, but str in Python 2
+                last_line_number += (
+                    f_code.co_lnotab[i] if sys.version_info[0] >= 3
+                    else ord(f_code.co_lnotab[i]))
+                i += 2
 
+        return last_line_number
 
-_is_py3 = (sys.version_info[0] >= 3)
+    def __init__(self, logger, function):
+        """
+        :param logging.Logger logger: the tracing logger
+        :param function: the function being traced
+        """
+        self._logger = logger
 
+        f_code = function.__code__
+        self._f_filename = f_code.co_filename
+        self._f_firstlineno = f_code.co_firstlineno
+        self._f_lastlineno = self._find_last_line_number(f_code)
+        self._f_name = function.__name__
 
-def _find_last_line_number(f_code):
-    """Return the last line number of a function.
+    @property
+    def name(self):
+        """The name (channel) used by the tracing logger.
 
-    :param types.CodeType f_code: the bytecode object for a
-                                  function, as obtained from
-                                  ``function.__code__``
-    :return: the last physical line number of the function
-    :rtype: int
+        :rtype: str
 
-    """
-    last_line_number = f_code.co_firstlineno
+        """
+        return self._logger.name
 
-    # Jython and IronPython do not have co_lnotab
-    if hasattr(f_code, "co_lnotab"):
-        # co_lnotab is a sequence of 2-byte offsets
-        # (address offset, line number offset), each relative to the previous;
-        # we only care about the line number offsets here, so start at index 1
-        # and increment by 2
-        i = 1
-        while i < len(f_code.co_lnotab):
-            # co_lnotab is bytes in Python 3, but str in Python 2
-            last_line_number += (
-                f_code.co_lnotab[i] if _is_py3
-                else ord(f_code.co_lnotab[i]))
-            i += 2
+    @property
+    def propagate(self):
+        """Whether or not the tracing logger propagates to its parent.
 
-    return last_line_number
+        :rtype: bool
 
+        """
+        return self._logger.propagate
 
-def _make_return_record(channel, f_name, f_filename, f_lineno, f_return):
-    """Emit the log record for a function return.
+    def isEnabledFor(self, level):
+        """Whether or not the tracing logger is enabled for *level*.
 
-    :param str channel: the logging channel to which tracing log entries
-                        will be emitted
-    :param str f_name: the name of the traced function
-    :param str f_filename: the filename in which the traced function is
-                           defined
-    :param int f_lineno: the line number in *f_filename* of the traced
-                         function's last physical line
-    :param f_return: the value that was returned by the traced function
-    :rtype: logging.LogRecord
+        :param int level: the logging level being queried
+        :rtype: bool
 
-    """
-    return logging.LogRecord(
-        channel, TRACE, f_filename, f_lineno, "RETURN %r", (f_return,), None,
-        func=f_name)
+        """
+        return self._logger.isEnabledFor(level)
+
+    def getEffectiveLevel(self):
+        """Return the effective level for the tracing logger.
+
+        :rtype: int
+
+        """
+        return self._logger.getEffectiveLevel()
+
+    def hasHandlers(self):
+        """Whether or not any handlers are registered for the tracing
+        logger.
+
+        :rtype: bool
+
+        """
+        # adapted from Python 3.5 logging module
+        c = self._logger
+        rv = False
+        while c:
+            if c.handlers:
+                rv = True 
+                break
+            if not c.propagate:
+                break
+            else:
+                c = c.parent
+        return rv
+
+    def trace_call(self, f_args, f_keywords):
+        """Emit a CALL log record for the traced function.
+
+        :param tuple f_args: the positional arguments that were passed
+                             when the traced function was called
+        :param dict f_keywords: the keyword arguments that were passed
+                                when the traced function was called
+
+        .. warning::
+           This method does **not** perform a level check, and delegates
+           *directly* to :meth:`logging.Logger.handle`. The caller is
+           expected to perform the level check prior to calling this
+           method.
+
+        """
+        call_record = logging.LogRecord(
+            self._logger.name,      # name
+            TRACE,                  # level
+            self._f_filename,       # pathname
+            self._f_firstlineno,    # lineno
+            "CALL *%r **%r",        # msg
+            (f_args, f_keywords),   # args
+            None,                   # exc_info
+            func=self._f_name)
+        self._logger.handle(call_record)
+
+    def trace_return(self, f_return):
+        """Emit a RETURN log record for the traced function.
+
+        :param f_return: the value returned by the traced function when
+                         it was called
+
+        .. warning::
+           This method does **not** perform a level check, and delegates
+           *directly* to :meth:`logging.Logger.handle`. The caller is
+           expected to perform the level check prior to calling this
+           method.
+
+        """
+        return_record = logging.LogRecord(
+            self._logger.name,  # name
+            TRACE,              # level
+            self._f_filename,   # pathname
+            self._f_lastlineno, # lineno
+            "RETURN %r",        # msg
+            (f_return,),        # args
+            None,               # exc_info
+            func=self._f_name)
+        self._logger.handle(return_record)
 

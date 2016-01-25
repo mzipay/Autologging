@@ -29,12 +29,11 @@ This module specifically tests subclassing/inheritance behavior of
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import logging
 import unittest
 
-from autologging import TRACE
+from autologging import TRACE, __version__
 from test import dummy_module_logger, get_dummy_lineno, list_handler
 from test.dummy import (
     _NonTracedParent,

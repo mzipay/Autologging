@@ -26,12 +26,11 @@
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import logging
 import unittest
 
-from autologging import _make_traceable_function, TRACE
+from autologging import _make_traceable_function, TRACE, __version__
 
 from test import list_handler, named_tracer
 
@@ -61,11 +60,18 @@ class MakeTraceableFunctionTest(unittest.TestCase):
     def test_uses_specified_logger(self):
         proxy = _make_traceable_function(sample_function, named_tracer)
 
-        self.assertTrue(proxy._trace_log is named_tracer)
+        self.assertTrue(proxy._trace_log_delegator._logger is named_tracer)
 
     def test_with_trace_enabled_emits_log_records(self):
         named_tracer.setLevel(TRACE)
         proxy = _make_traceable_function(sample_function, named_tracer)
+        # IronPython gets func.__code__.co_freevars and func.__closure__ wrong
+        # ---------------------------------------------------------------------
+        """
+        print >> "\n\nfreevars and closure info:\n"
+        for (i, name) in enumerate(proxy.__code__.co_freevars):
+            print "%d:%s is" % (i, name), proxy.__closure__[i].cell_contents 
+        """
         proxy()
 
         self.assertEqual(2, len(list_handler.records))

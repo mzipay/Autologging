@@ -2,10 +2,11 @@
 
 http://ninthtest.net/python-autologging/
 
-[![Version 1.0.0](https://img.shields.io/badge/pypi-v1.0.0-orange.svg)](https://pypi.python.org/pypi/Autologging/)
+[![Version 1.0.1](https://img.shields.io/badge/pypi-v1.0.1-orange.svg)](https://pypi.python.org/pypi/Autologging/)
 [![Python 2.7, 3.3+](https://img.shields.io/badge/python-2.7,_3.3,_3.4,_3.5-blue.svg)](https://www.python.org/)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mzipay/Autologging/blob/master/LICENSE.txt)
-[![Wheel format](https://img.shields.io/badge/wheel-yes-brightgreen.svg)](https://pypi.python.org/pypi/Autologging/#downloads)
+[![Jython 2.7.0](https://img.shields.io/badge/jython-2.7.0-0066cc.svg)](http://www.jython.org/)
+[![IronPython 2.7.5](https://img.shields.io/badge/ironpython-2.7.5-0066cc.svg)](http://ironpython.net/)
+[![MIT License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://github.com/mzipay/Autologging/blob/master/LICENSE.txt)
 
 ## Introduction
 
@@ -54,6 +55,8 @@ can be configured and controlled independently of application logging.
 
 ## Installation
 
+[![Wheel available](https://img.shields.io/badge/wheel-yes-brightgreen.svg)](https://pypi.python.org/pypi/Autologging/#downloads)
+
 The easiest way to install Autologging is to use
 [pip](https://pip.pypa.io/):
 
@@ -73,7 +76,8 @@ Alternatively, download and extract a source .zip or .tar.gz archive
 from https://github.com/mzipay/Autologging/releases or
 https://pypi.python.org/pypi/Autologging.
 
-Run the test suite and install the `autologging` module:
+Run the test suite and install the `autologging` module: (make sure you
+have [setuptools](https://pypi.python.org/pypi/setuptools) installed!)
 
 ```bash
 $ cd Autologging
@@ -83,9 +87,9 @@ $ python setup.py install
 
 ### Binary installation
 
-Download the Python wheel (.whl) from
-https://pypi.python.org/pypi/Autologging, or an .exe/.msi Windows
-installer from https://sourceforge.net/projects/autologging/files/.
+Download the Python wheel (.whl) or a Windows installer from
+https://pypi.python.org/pypi/Autologging or
+https://sourceforge.net/projects/autologging/files/.
 
 (Use [pip](https://pip.pypa.io/) or
 [wheel](https://pypi.python.org/pypi/wheel) to install the .whl.)

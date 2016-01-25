@@ -27,10 +27,11 @@ decorator function.
 __author__ = (
     "Matthew Zipay <mattz@ninthtest.net>, "
     "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
-__version__ = "1.0.0"
 
 import logging
 import unittest
+
+from autologging import __version__
 
 from test import (
     dummy_module_logger,

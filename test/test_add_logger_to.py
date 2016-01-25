@@ -23,12 +23,11 @@
 """Test case and runner for :func:`autologging._add_logger_to`."""
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "1.0.0"
 
 import logging
 import unittest
 
-from autologging import _add_logger_to
+from autologging import _add_logger_to, __version__
 
 from test import named_logger
 

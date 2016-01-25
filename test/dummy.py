@@ -22,13 +22,13 @@
 
 """Dummy classes and functions used in Autologging functional tests."""
 
-__author__ = "Matthew Zipay <mattz@ninthtest.net>, "\
-             "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>"
-__version__ = "1.0.0"
+__author__ = (
+    "Matthew Zipay <mattz@ninthtest.net>, "
+    "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
 
 import sys
 
-from autologging import logged, traced
+from autologging import logged, traced, __version__
 
 from test import named_logger, named_tracer
 
