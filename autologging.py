@@ -23,13 +23,14 @@
 __author__ = (
     "Matthew Zipay <mattz@ninthtest.net>, "
     "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
-from functools import partial, wraps
+from functools import wraps
 from inspect import isclass, isroutine
 import logging
+import os
 import sys
-from types import FunctionType, MethodType
+from types import FunctionType
 import warnings
 
 __all__ = [
@@ -525,6 +526,80 @@ def traced(*args):
     else: # `@traced("method_name1", ..)' class
         method_names = args[:]
         return lambda class_: _install_traceable_methods(class_, *method_names)
+
+
+__traced_original = traced
+
+
+def _traced_noop(*args):
+    obj = args[0] if args else None
+    if obj is None:
+        # treat `@traced()' as equivalent to `@traced'
+        return _traced_noop
+
+    if isclass(obj) or isroutine(obj): # `@traced' class or function
+        return obj
+    else: # `@traced(logger)' or `@traced("method_name1", ..)'
+        def traced_noop_decorator(class_or_fn):
+            return class_or_fn
+
+        return traced_noop_decorator
+
+
+def install_traced_noop():
+    """Replace the :func:`traced` decorator with an identity (no-op)
+    decorator.
+
+    Although the overhead of a ``@traced`` function or method is minimal
+    when the :data:`TRACED` log level is disabled, there is still *some*
+    overhead (the logging level check, an extra function call).
+
+    If you would like to completely *eliminate* this overhead, call this
+    function **before** any classes or functions in your application are
+    decorated with ``@traced``. The :func:`traced` decorator will be
+    replaced with a no-op decorator that simply returns the class or
+    function unmodified.
+
+    .. note::
+       The **recommended** way to install the no-op ``@traced``
+       decorator is to set the ``AUTOLOGGING_INSTALL_TRACED_NOOP``
+       environment variable.
+
+       The value of this environment variable will be evaluated using
+       the built-in :obj:`bool` type. If it evaluates ``True``, then
+       the ``@traced`` no-op will be installed automatically.
+
+    As an alternative to setting the ``AUTOLOGGING_INSTALL_TRACED_NOOP``
+    environment variable, you can also call this function directly in
+    your application's bootstrap module. For example::
+
+       import autologging
+
+       if running_in_production:
+           autologging.install_traced_noop()
+
+    .. warning::
+       This function **does not** "revert" any already-``@traced`` class
+       or function! It simply replaces the ``autologging.traced`` module
+       reference with a no-op.
+
+       For this reason it is imperative that
+       ``autologging.install_traced_noop()`` be called **before** the
+       ``@traced`` decorator has been applied to any class or function
+       in the application. (This is why the
+       ``AUTOLOGGING_INSTALL_TRACED_NOOP`` environment variable is the
+       recommended approach for installing the no-op - it allows
+       Autologging itself to guarantee that the no-op is installed
+       before any classes or functions are decorated.)
+
+    """
+    global traced
+    traced = _traced_noop
+    logging.getLogger().info("autologging.traced no-op is installed")
+
+
+if bool(os.getenv("AUTOLOGGING_INSTALL_TRACED_NOOP")):
+    install_traced_noop()
 
 
 def _generate_logger_name(obj, parent_name=None):

@@ -95,6 +95,9 @@ def suite():
     from test import (
         test_logged,
         test_traced,
+        test_traced_noop,
+        test_install_traced_noop,
+        test_install_traced_noop_envauto,
         test_generate_logger_name,
         test_add_logger_to,
         test_make_traceable_function,
@@ -118,6 +121,9 @@ def suite():
 
     suite.addTest(test_logged.suite())
     suite.addTest(test_traced.suite())
+    suite.addTest(test_traced_noop.suite())
+    suite.addTest(test_install_traced_noop.suite())
+    suite.addTest(test_install_traced_noop_envauto.suite())
     suite.addTest(test_generate_logger_name.suite())
     suite.addTest(test_add_logger_to.suite())
     suite.addTest(test_make_traceable_function.suite())
