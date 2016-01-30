@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="Autologging",
-    version="1.0.1",
+    version="1.1.0",
     description="Autologging makes logging and tracing Python classes easy.",
     long_description="""\
 Autologging eliminates boilerplate logging setup code and tracing code,

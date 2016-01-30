@@ -4,8 +4,8 @@ Autologging --- easier logging and tracing for Python classes
 
 :Release: |release|
 
-.. image:: https://img.shields.io/badge/pypi-v1.0.1-orange.svg
-   :alt: Version 1.0.1
+.. image:: https://img.shields.io/badge/pypi-v1.1.0-orange.svg
+   :alt: Version 1.1.0
    :target: https://pypi.python.org/pypi/Autologging/
 
 .. image:: https://img.shields.io/badge/python-2.7,_3.3,_3.4,_3.5-blue.svg
@@ -50,6 +50,15 @@ All examples given on this site use Python 3 syntax.
 Autologging exposes two decorators (:func:`autologging.logged`,
 :func:`autologging.traced`) and a custom log level
 (:attr:`autologging.TRACE`).
+
+.. versionadded:: 1.1.0
+   Autologging now exposes the :func:`autologging.install_traced_noop`
+   function. This function **replaces** the ``traced`` decorator with a
+   no-op that returns traced classes and functions unmodified
+   (effectively disabling all tracing capabilities). This is useful for
+   cases where *any* overhead from tracing is not desired (for example,
+   when running in production environments, or when running performance
+   tests).
 
 Table of Contents
 -----------------

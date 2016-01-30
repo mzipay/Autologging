@@ -37,6 +37,7 @@ __all__ = [
     "TRACE",
     "logged",
     "traced",
+    "install_traced_noop",
 ]
 
 #: A custom tracing log level, lower in severity than :attr:`logging.DEBUG`.
