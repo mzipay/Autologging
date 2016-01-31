@@ -563,14 +563,14 @@ def install_traced_noop():
 
     .. note::
        The **recommended** way to install the no-op ``@traced``
-       decorator is to set the ``AUTOLOGGING_INSTALL_TRACED_NOOP``
+       decorator is to set the ``AUTOLOGGING_TRACED_NOOP``
        environment variable.
 
        The value of this environment variable will be evaluated using
        the built-in :obj:`bool` type. If it evaluates ``True``, then
        the ``@traced`` no-op will be installed automatically.
 
-    As an alternative to setting the ``AUTOLOGGING_INSTALL_TRACED_NOOP``
+    As an alternative to setting the ``AUTOLOGGING_TRACED_NOOP``
     environment variable, you can also call this function directly in
     your application's bootstrap module. For example::
 
@@ -587,11 +587,11 @@ def install_traced_noop():
        For this reason it is imperative that
        ``autologging.install_traced_noop()`` be called **before** the
        ``@traced`` decorator has been applied to any class or function
-       in the application. (This is why the
-       ``AUTOLOGGING_INSTALL_TRACED_NOOP`` environment variable is the
-       recommended approach for installing the no-op - it allows
-       Autologging itself to guarantee that the no-op is installed
-       before any classes or functions are decorated.)
+       in the application. (This is why the ``AUTOLOGGING_TRACED_NOOP``
+       environment variable is the recommended approach for installing
+       the no-op - it allows Autologging itself to guarantee that the
+       no-op is installed before any classes or functions are
+       decorated.)
 
     """
     global traced
@@ -599,7 +599,7 @@ def install_traced_noop():
     logging.getLogger().info("autologging.traced no-op is installed")
 
 
-if bool(os.getenv("AUTOLOGGING_INSTALL_TRACED_NOOP")):
+if bool(os.getenv("AUTOLOGGING_TRACED_NOOP")):
     install_traced_noop()
 
 

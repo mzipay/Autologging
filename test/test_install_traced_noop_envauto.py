@@ -26,7 +26,7 @@ function.
 .. note::
    This test module specifically checks that Autlogging *automatically*
    installs the ``@traced`` no-op decorator when the
-   ``AUTOLOGGING_INSTALL_TRACED_NOOP`` environment variable is set.
+   ``AUTOLOGGING_TRACED_NOOP`` environment variable is set.
 
 """
 
@@ -49,14 +49,14 @@ logging.getLogger().setLevel(logging.FATAL + 1)
 
 
 def setUpModule():
-    os.environ["AUTOLOGGING_INSTALL_TRACED_NOOP"] = "True"
-    assert os.getenv("AUTOLOGGING_INSTALL_TRACED_NOOP") == "True"
+    os.environ["AUTOLOGGING_TRACED_NOOP"] = "True"
+    assert os.getenv("AUTOLOGGING_TRACED_NOOP") == "True"
     reload(autologging)
 
 
 def tearDownModule():
-    del os.environ["AUTOLOGGING_INSTALL_TRACED_NOOP"]
-    assert os.getenv("AUTOLOGGING_INSTALL_TRACED_NOOP") is None
+    del os.environ["AUTOLOGGING_TRACED_NOOP"]
+    assert os.getenv("AUTOLOGGING_TRACED_NOOP") is None
     reload(autologging)
 
 
