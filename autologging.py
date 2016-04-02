@@ -599,7 +599,7 @@ def install_traced_noop():
     logging.getLogger().info("autologging.traced no-op is installed")
 
 
-if bool(os.getenv("AUTOLOGGING_TRACED_NOOP")):
+if os.getenv("AUTOLOGGING_TRACED_NOOP"):
     install_traced_noop()
 
 
