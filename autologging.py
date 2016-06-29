@@ -564,11 +564,11 @@ def install_traced_noop():
     .. note::
        The **recommended** way to install the no-op ``@traced``
        decorator is to set the ``AUTOLOGGING_TRACED_NOOP``
-       environment variable.
+       environment variable to any non-empty value.
 
-       The value of this environment variable will be evaluated using
-       the built-in :obj:`bool` type. If it evaluates ``True``, then
-       the ``@traced`` no-op will be installed automatically.
+       If the ``AUTOLOGGING_TRACED_NOOP`` environment variable is
+       set to a non-empty value when Autologging is loaded, the
+       ``@traced`` no-op will be installed automatically.
 
     As an alternative to setting the ``AUTOLOGGING_TRACED_NOOP``
     environment variable, you can also call this function directly in
