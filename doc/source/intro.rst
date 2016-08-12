@@ -112,7 +112,7 @@ in less code that's more readable and easier to maintain::
    @traced
    class MyClass:
 
-      def def my_method(self, arg, keyword=None):
+      def my_method(self, arg, keyword=None):
          self.__log.info("my message")
          return "%s and %s" % (arg, keyword)
 
