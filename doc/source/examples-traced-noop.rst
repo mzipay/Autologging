@@ -110,13 +110,12 @@ Recommended approach: Let Autologging install the ``@traced`` no-op automaticall
 
 The recommended approach is to instruct Autologging to install the no-op
 automatically. This can be accomplished by setting the
-``AUTOLOGGING_TRACED_NOOP`` environment variable to a value such that
-``bool(os.getenv("AUTOLOGGING_TRACED_NOOP"))`` evaluates to ``True``.
+``AUTOLOGGING_TRACED_NOOP`` environment variable to any **non-empty** value.
 
 For example, we would run the application in a production or performance
 testing environment like so::
 
-   $ export AUTOLOGGING_TRACED_NOOP=True
+   $ export AUTOLOGGING_TRACED_NOOP=1
    $ python bootstrap.py
 
 .. note::

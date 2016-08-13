@@ -4,25 +4,25 @@ Autologging --- easier logging and tracing for Python classes
 
 :Release: |release|
 
-.. image:: https://img.shields.io/badge/pypi-v1.1.0-orange.svg
-   :alt: Version 1.1.0
-   :target: https://pypi.python.org/pypi/Autologging/
+.. image:: https://img.shields.io/pypi/v/Autologging.svg
+   :alt: PyPI version
+   :target: https://pypi.python.org/pypi/Autologging
 
-.. image:: https://img.shields.io/badge/python-2.7,_3.3,_3.4,_3.5-blue.svg
-   :alt: Python 2.7, 3.3+
+.. image:: https://img.shields.io/pypi/pyversions/Autologging.svg
+   :alt: Python version
    :target: https://www.python.org/
 
-.. image:: https://img.shields.io/badge/jython-2.7.0-0066cc.svg
-   :alt: Jython 2.7.0
-   :target: http://www.jython.org/
+.. image:: https://img.shields.io/pypi/implementation/Autologging.svg
+   :alt: Python implementation
+   :target: https://pypi.python.org/pypi/Autologging
 
-.. image:: https://img.shields.io/badge/ironpython-2.7.5-0066cc.svg
-   :alt: IronPython 2.7.5
-   :target: http://ironpython.net/
-
-.. image:: https://img.shields.io/badge/license-MIT-lightgrey.svg
-   :alt: MIT License
+.. image:: https://img.shields.io/pypi/l/Autologging.svg
+   :alt: License
    :target: https://github.com/mzipay/Autologging/blob/master/LICENSE.txt
+
+.. image:: https://img.shields.io/pypi/wheel/Autologging.svg
+   :alt: Wheel availability
+   :target: https://pypi.python.org/pypi/Autologging
 
 Autologging eliminates boilerplate logging setup code and tracing code,
 and provides a means to separate application logging from program flow
@@ -73,10 +73,6 @@ Table of Contents
 
 Download and Install
 --------------------
-
-.. image:: https://img.shields.io/badge/wheel-yes-brightgreen.svg
-   :alt: Wheel available
-   :target: https://pypi.python.org/pypi/Autologging/#downloads
 
 The easiest way to install Autologging is to use `pip
 <https://pip.pypa.io/>`_::

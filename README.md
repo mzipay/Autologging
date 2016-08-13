@@ -2,11 +2,11 @@
 
 http://ninthtest.net/python-autologging/
 
-[![Version 1.0.1](https://img.shields.io/badge/pypi-v1.0.1-orange.svg)](https://pypi.python.org/pypi/Autologging/)
-[![Python 2.7, 3.3+](https://img.shields.io/badge/python-2.7,_3.3,_3.4,_3.5-blue.svg)](https://www.python.org/)
-[![Jython 2.7.0](https://img.shields.io/badge/jython-2.7.0-0066cc.svg)](http://www.jython.org/)
-[![IronPython 2.7.5](https://img.shields.io/badge/ironpython-2.7.5-0066cc.svg)](http://ironpython.net/)
-[![MIT License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://github.com/mzipay/Autologging/blob/master/LICENSE.txt)
+[![PyPI version](https://img.shields.io/pypi/v/Autologging.svg)](https://pypi.python.org/pypi/Autologging)
+[![Python version](https://img.shields.io/pypi/pyversions/Autologging.svg)](https://pypi.python.org/pypi/Autologging)
+[![Python implementation](https://img.shields.io/pypi/implementation/Autologging.svg)](https://pypi.python.org/pypi/Autologging)
+[![License](https://img.shields.io/pypi/l/Autologging.svg)](https://github.com/mzipay/Autologging/blob/master/LICENSE.txt)
+[![Wheel availability](https://img.shields.io/pypi/wheel/Autologging.svg)](https://pypi.python.org/pypi/Autologging)
 
 ## Introduction
 
@@ -55,8 +55,6 @@ can be configured and controlled independently of application logging.
 
 ## Installation
 
-[![Wheel available](https://img.shields.io/badge/wheel-yes-brightgreen.svg)](https://pypi.python.org/pypi/Autologging/#downloads)
-
 The easiest way to install Autologging is to use
 [pip](https://pip.pypa.io/):
 
@@ -73,8 +71,9 @@ $ git clone https://github.com/mzipay/Autologging.git
 ```
 
 Alternatively, download and extract a source .zip or .tar.gz archive
-from https://github.com/mzipay/Autologging/releases or
-https://pypi.python.org/pypi/Autologging.
+from https://github.com/mzipay/Autologging/releases,
+https://pypi.python.org/pypi/Autologging or
+https://sourceforge.net/projects/autologging/files/.
 
 Run the test suite and install the `autologging` module: (make sure you
 have [setuptools](https://pypi.python.org/pypi/setuptools) installed!)
