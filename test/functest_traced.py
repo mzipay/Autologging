@@ -123,7 +123,7 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
             list_handler.records[1], traced_function, "test.dummy.TracedClass",
             ("TC.c_m None and None",), "TC.c_m")
 
-    def test_instance_method_tracing_log_records(self):
+    def test_init_method_tracing_log_records(self):
         obj = TracedClass()
 
         self.assertEqual("TC.%s %s and %s", obj.format_string)
@@ -136,6 +136,23 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
         self._assert_return_record(
             list_handler.records[1], traced_function, "test.dummy.TracedClass",
             (None,), "TC.__i__")
+
+    def test_call_method_tracing_log_records(self):
+        obj = TracedClass()
+
+        list_handler.reset()
+        rv = obj()
+
+        self.assertEqual("TC.__call__", rv)
+        self.assertEqual(2, len(list_handler.records))
+
+        traced_function = TracedClass.__dict__["__call__"].__wrapped__
+        self._assert_call_record(
+            list_handler.records[0], traced_function, "test.dummy.TracedClass",
+            (tuple(), dict()), "TC.__c__")
+        self._assert_return_record(
+            list_handler.records[1], traced_function, "test.dummy.TracedClass",
+            ("TC.__call__",), "TC.__c__")
 
     def test_no_tracing_log_records_when_trace_disabled(self):
         dummy_module_logger.setLevel(logging.DEBUG)

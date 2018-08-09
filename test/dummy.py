@@ -108,6 +108,9 @@ class TracedClass(object):
     def __init__(self): #TC.__i__:L1
         self.format_string = "TC.%s %s and %s" #TC.__i__:LN
 
+    def __call__(self): #TC.__c__:L1
+        return "TC.__call__" #TC.__c__:LN
+
 
 @logged #l_a_t_f:L1
 @traced(named_tracer)
@@ -131,6 +134,10 @@ class LoggedAndTracedClass:
 
         def __init__(self): #LATC.NC.__i__:L1
             self.__log.info("LATC.NC.__i__ message")    #LATC.NC.__i__:LN
+
+        def __call__(self, arg): #LATC.NC.__c__:L1
+            self.__log.info("LATC.NC.__c__ message")
+            return "LATC.NC.__call__ %s" % arg   #LATC.NC.__c__:LN
 
     @logged
     @traced(named_tracer)

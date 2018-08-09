@@ -93,6 +93,31 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
             "test.dummy.LoggedAndTracedClass", ("LATC.m None and None",),
             "LATC.m")
 
+    def test_call_method_log_and_trace_records(self):
+        obj = LoggedAndTracedClass.NestedClass()
+
+        list_handler.reset()
+        rv = obj("test")
+
+        self.assertEqual("LATC.NC.__call__ test", rv)
+        self.assertEqual(3, len(list_handler.records))
+
+        wrapped_function = \
+            LoggedAndTracedClass.NestedClass.__dict__["__call__"].__wrapped__
+        qualname = getattr(
+            LoggedAndTracedClass.NestedClass, "__qualname__", "NestedClass")
+        expected_tracer_name = "test.dummy.%s" % qualname
+        expected_logger_name = "logged.testing.%s" % qualname
+        self._assert_call_record(
+            list_handler.records[0], wrapped_function, expected_tracer_name,
+            (("test",), dict()), "LATC.NC.__c__")
+        self._assert_log_record(
+            list_handler.records[1], wrapped_function, expected_logger_name,
+            "LATC.NC.__c__")
+        self._assert_return_record(
+            list_handler.records[2], wrapped_function, expected_tracer_name,
+            ("LATC.NC.__call__ test",), "LATC.NC.__c__")
+
     def test_instance_method_log_record_when_trace_disabled(self):
         dummy_module_logger.setLevel(logging.DEBUG)
         value = LoggedAndTracedClass().method(None)
