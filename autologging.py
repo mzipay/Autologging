@@ -780,7 +780,7 @@ def _get_default_traceable_method_names(class_):
     for (name, member) in class_.__dict__.items():
         if isroutine(member) and (
                 not _is_special_name(name) or
-                name == "__init__"):
+                name in ("__init__", "__call__")):
             default_traceable_method_names.append(name)
 
     return default_traceable_method_names
