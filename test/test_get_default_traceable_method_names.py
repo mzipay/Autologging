@@ -39,6 +39,9 @@ class Parent(object):
     def overridden(self):
         pass
 
+    def __call__(self):
+        pass
+
 
 class SampleClass(Parent):
 
@@ -104,6 +107,13 @@ class GetDefaultTraceableMethodNamesTest(unittest.TestCase):
 
     def test_does_not_identify_special_method(self):
         self.assertFalse("__eq__" in self.method_names)
+
+    def test_identifies_call_magic_method(self):
+        self.assertTrue(
+                "__call__" in _get_default_traceable_method_names(Parent))
+
+    def test_does_not_identify_inherited_call_magic_method(self):
+        self.assertFalse("__call__" in self.method_names)
 
 
 def suite():
