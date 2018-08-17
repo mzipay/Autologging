@@ -254,8 +254,9 @@ def traced(*args):
     :param class_: the class whose methods will be traced
 
     By default, all "public", "_nonpublic", and "__internal" methods, as
-    well as the special "__init__" method, will be traced. Tracing log
-    entries will be written to a logger named for the module and class:
+    well as the special "__init__" and "__call__" methods, will be
+    traced. Tracing log entries will be written to a logger named for
+    the module and class:
 
     >>> import sys
     >>> logging.basicConfig(
@@ -273,6 +274,8 @@ def traced(*args):
     ...         return self._x ** y
     ...     def __repr__(self):
     ...         return "Class(%r)" % self._x
+    ...     def __call__(self):
+    ...         return self._x
     ...
     >>> obj = Class(7)
     TRACE:autologging.Class:__init__:CALL *(7,) **{}
@@ -290,6 +293,10 @@ def traced(*args):
     343
     >>> repr(obj) # not traced by default
     'Class(7)'
+    >>> obj()
+    TRACE:autologging.Class:__call__:CALL *() **{}
+    TRACE:autologging.Class:__call__:RETURN 7
+    7
 
     .. note::
        When the runtime Python version is >= 3.3, the *qualified* class
@@ -322,6 +329,8 @@ def traced(*args):
     ...         return self._x ** y
     ...     def __repr__(self):
     ...         return "Class(%r)" % self._x
+    ...     def __call__(self):
+    ...         return self._x
     ...
     >>> obj = Class(7)
     TRACE:my.channel.Class:__init__:CALL *(7,) **{}
@@ -339,6 +348,10 @@ def traced(*args):
     343
     >>> repr(obj) # not traced by default
     'Class(7)'
+    >>> obj()
+    TRACE:my.channel.Class:__call__:CALL *() **{}
+    TRACE:my.channel.Class:__call__:RETURN 7
+    7
 
     .. rubric:: Trace specified methods using the default logger
 
@@ -364,6 +377,8 @@ def traced(*args):
     ...         return self._x ** y
     ...     def __repr__(self):
     ...         return "Class(%r)" % self._x
+    ...     def __call__(self):
+    ...         return self._x
     ...
     >>> obj = Class(7)
     >>> obj.public(9)
@@ -378,6 +393,8 @@ def traced(*args):
     343
     >>> repr(obj)
     'Class(7)'
+    >>> obj()
+    7
 
     .. warning::
        When method names are specified explicitly via *args*,
@@ -425,6 +442,8 @@ def traced(*args):
     ...         return self._x ** y
     ...     def __repr__(self):
     ...         return "Class(%r)" % self._x
+    ...     def __call__(self):
+    ...         return self._x
     ...
     >>> obj = Class(7)
     >>> obj.public(9)
@@ -439,6 +458,8 @@ def traced(*args):
     343
     >>> repr(obj) # not traced by default
     'Class(7)'
+    >>> obj()
+    7
 
     .. warning::
        When method names are specified explicitly via *args*,
@@ -692,8 +713,8 @@ def _install_traceable_methods(class_, *method_names, **keywords):
     :keyword logging.Logger logger: the logger to use for tracing
 
     If *method_names* is empty, all "public", "_nonpublic", and
-    "__internal" methods, as well as the special "__init__" method, will
-    be traced by default.
+    "__internal" methods, as well as the special "__init__" and
+    "__call__" methods, will be traced by default.
 
     If *logger* is unspecified, a default logger will be used to log
     tracing messages.
