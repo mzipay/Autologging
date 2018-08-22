@@ -1,30 +1,31 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013-2016 Matthew Zipay <mattz@ninthtest.net>
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
 
 """Dummy classes and functions used in Autologging functional tests."""
 
-__author__ = (
-    "Matthew Zipay <mattz@ninthtest.net>, "
-    "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
+__author__ = "Matthew Zipay <mattz@ninthtest.info>"
 
 import sys
 
@@ -212,4 +213,30 @@ class TracedChildTracedParent(_TracedParent):
             super(TracedChildTracedParent, self).overridden_method(
                 arg, keyword=keyword)
         return "%s TCTP.o_m" % parent_return_value  #TCTP.o_m:LN
+
+
+@traced
+class GeneratorClass(object):
+
+    @staticmethod   #GC.s_g:L1
+    def static_generator(v):
+        for c in reversed(v):
+            yield c #GC.s_g:LY  #GC.s_g:LN
+
+    @classmethod    #GC.c_g:L1
+    def class_generator(cls, v):
+        for c in reversed(v):
+            yield c #GC.c_g:LY  #GC.c_g:LN
+
+    def method_generator(self, v):  #GC.m_g:L1
+        for c in reversed(v):
+            yield c #GC.m_g:LY  #GC.m_g:LN
+
+
+@traced #t_g:L1
+def traced_generator(v):
+    for c in reversed(v):
+        yield c #t_g:LY
+    # `yield' might not be the last instruction in a generator!
+    pass    #t_g:LN
 

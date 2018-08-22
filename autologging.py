@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -23,17 +23,15 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-__author__ = (
-    "Matthew Zipay <mattz@ninthtest.net>, "
-    "Simon Knopp <simon.knopp@pg.canterbury.ac.nz>")
-__version__ = "1.1.0"
+__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__version__ = "1.2.0a0"
 
 from functools import wraps
-from inspect import isclass, isroutine
+from inspect import isclass, isgenerator, isroutine
 import logging
 import os
 import sys
-from types import FunctionType
+from types import FunctionType, GeneratorType
 import warnings
 
 __all__ = [
@@ -51,13 +49,14 @@ logging.addLevelName(TRACE, "TRACE")
 def logged(obj):
     """Add a logger member to a decorated class or function.
 
-    :param obj: the class or function object being decorated, or an
-                optional :class:`logging.Logger` object to be used as
-                the parent logger (instead of the default module-named
-                logger)
-    :return: *obj* if *obj* is a class or function; otherwise, if *obj*
-             is a logger, returns a lambda decorator that will in turn
-             set the logger attribute and return *obj*
+    :arg obj:
+       the class or function object being decorated, or an optional
+       :class:`logging.Logger` object to be used as the parent logger
+       (instead of the default module-named logger)
+    :return:
+       *obj* if *obj* is a class or function; otherwise, if *obj* is a
+       logger, return a lambda decorator that will in turn set the
+       logger attribute and return *obj*
 
     If *obj* is a :obj:`class`, then ``obj.__log`` will have the logger
     name "<module-name>.<class-name>":
@@ -214,7 +213,7 @@ def traced(*args):
 
     .. rubric:: Trace an unbound function using the default logger
 
-    :param func: the unbound function to be traced
+    :arg FunctionType func: the unbound function to be traced
 
     By default, a logger named for the function's module is used:
 
@@ -233,8 +232,8 @@ def traced(*args):
 
     .. rubric:: Trace an unbound function using a named logger
 
-    :param logging.Logger logger: the parent logger used to trace the\
-                                  unbound function
+    :arg logging.Logger logger:
+       the parent logger used to trace the unbound function
 
     >>> import sys
     >>> logging.basicConfig(
@@ -251,7 +250,7 @@ def traced(*args):
 
     .. rubric:: Trace default methods using the default logger
 
-    :param class_: the class whose methods will be traced
+    :arg class_: the class whose methods will be traced
 
     By default, all "public", "_nonpublic", and "__internal" methods, as
     well as the special "__init__" and "__call__" methods, will be
@@ -306,8 +305,8 @@ def traced(*args):
 
     .. rubric:: Trace default methods using a named logger
 
-    :param logging.Logger logger: the parent logger used to trace the
-                                  methods of the class
+    :arg logging.Logger logger:
+       the parent logger used to trace the methods of the class
 
     By default, all "public", "_nonpublic", and "__internal" methods, as
     well as the special "__init__" method, will be traced. Tracing log
@@ -355,8 +354,8 @@ def traced(*args):
 
     .. rubric:: Trace specified methods using the default logger
 
-    :param tuple method_names: the names of the methods that will be
-                               traced
+    :arg tuple method_names:
+       the names of the methods that will be traced
 
     Tracing log entries will be written to a logger named for the
     module and class:
@@ -421,10 +420,10 @@ def traced(*args):
 
     .. rubric:: Trace specified methods using a named logger
 
-    :param logging.Logger logger: the parent logger used to trace the
-                                  methods of the class
-    :param tuple method_names: the names of the methods that will be
-                               traced
+    :arg logging.Logger logger:
+       the parent logger used to trace the methods of the class
+    :arg tuple method_names:
+       the names of the methods that will be traced
 
     >>> import sys
     >>> logging.basicConfig(
@@ -557,6 +556,7 @@ __traced_original = traced
 
 
 def _traced_noop(*args):
+    """Turn the ``@traced`` decorator into a no-op."""
     obj = args[0] if args else None
     if obj is None:
         # treat `@traced()' as equivalent to `@traced'
@@ -630,7 +630,7 @@ if os.getenv("AUTOLOGGING_TRACED_NOOP"):
 def _generate_logger_name(obj, parent_name=None):
     """Generate the logger name (channel) for a class or function.
 
-    :param obj: a class or function
+    :arg obj: a class or function
     :keyword str parent_name: the name of *obj*'s parent logger
     :rtype: str
 
@@ -647,7 +647,7 @@ def _generate_logger_name(obj, parent_name=None):
 def _add_logger_to(obj, logger_name=None):
     """Set a :class:`logging.Logger` member on *obj*.
 
-    :param obj: a class or function object
+    :arg obj: a class or function object
     :keyword str logger_name: the name (channel) of the logger for *obj*
     :return: *obj*
 
@@ -669,10 +669,11 @@ def _add_logger_to(obj, logger_name=None):
 def _make_traceable_function(function, logger):
     """Return a tracing proxy function for *function*.
 
-    :param function: an unbound, module-level (or nested) function
-    :param logging.Logger logger: the logger for tracing messages
-    :return: a proxy function that wraps *function* to provide the call
-             and return tracing
+    :arg function: an unbound, module-level (or nested) function
+    :arg logging.Logger logger: the logger for tracing messages
+    :return:
+       a proxy function that wraps *function* to provide the call and
+       return tracing
 
     """
     log_delegator = _TracingLoggerDelegator(logger, function)
@@ -686,6 +687,8 @@ def _make_traceable_function(function, logger):
             log_delegator.trace_call(args, keywords)
             value = function(*args, **keywords)
             log_delegator.trace_return(value)
+            if isgenerator(value):
+                return _GeneratorIteratorTracingProxy(value, logger)
             return value
         else:
             return function(*args, **keywords)
@@ -708,8 +711,8 @@ def _install_traceable_methods(class_, *method_names, **keywords):
     """Substitute tracing proxy methods for the methods named in
     *method_names* in *class_*'s ``__dict__``.
 
-    :param class_: a class being traced
-    :param tuple method_names: the names of the methods to be traced
+    :arg class_: a class being traced
+    :arg tuple method_names: the names of the methods to be traced
     :keyword logging.Logger logger: the logger to use for tracing
 
     If *method_names* is empty, all "public", "_nonpublic", and
@@ -758,11 +761,13 @@ def _get_traceable_method_names(method_names, class_):
     """Filter (and possibly mangle) *method_names* so that only method
     names actually defined as methods in *cls_dict* remain.
 
-    :param method_names: a sequence of names that should identify
-                         methods defined in *class_*
-    :param class_: the class being traced
-    :return: a sequence of names identifying methods that are defined in
-             *class_* that will be traced
+    :arg method_names:
+       a sequence of names that should identify methods defined in
+       *class_*
+    :arg class_: the class being traced
+    :return:
+       a sequence of names identifying methods that are defined in
+       *class_* that will be traced
     :rtype: list
 
     .. warning::
@@ -790,9 +795,10 @@ def _get_traceable_method_names(method_names, class_):
 def _get_default_traceable_method_names(class_):
     """Return all names in *cls_dict* that identify methods.
 
-    :param class_: the class being traced
-    :return: a sequence of names identifying methods of *class_* that
-             will be traced
+    :arg class_: the class being traced
+    :return:
+       a sequence of names identifying methods of *class_* that will be
+       traced
     :rtype: list
 
     """
@@ -810,7 +816,7 @@ def _get_default_traceable_method_names(class_):
 def _is_internal_name(name):
     """Determine whether or not *name* is an "__internal" name.
 
-    :param str name: a name defined in a class ``__dict__``
+    :arg str name: a name defined in a class ``__dict__``
     :return: ``True`` if *name* is an "__internal" name, else ``False``
     :rtype: bool
 
@@ -822,8 +828,8 @@ def _mangle_name(internal_name, class_name):
     """Transform *name* (which is assumed to be an "__internal" name)
     into a "_ClassName__internal" name.
 
-    :param str internal_name: the assumed-to-be-"__internal" member name
-    :param str class_name: the name of the class where *name* is defined
+    :arg str internal_name: the assumed-to-be-"__internal" member name
+    :arg str class_name: the name of the class where *name* is defined
     :return: the transformed "_ClassName__internal" name
     :rtype: str
 
@@ -834,7 +840,7 @@ def _mangle_name(internal_name, class_name):
 def _is_special_name(name):
     """Determine whether or not *name* is a "__special__" name.
 
-    :param str name: a name defined in a class ``__dict__``
+    :arg str name: a name defined in a class ``__dict__``
     :return: ``True`` if *name* is a "__special__" name, else ``False``
     :rtype: bool
 
@@ -846,11 +852,12 @@ def _make_traceable_instancemethod(class_, method_descriptor, logger):
     """Create a method descriptor that returns the tracing proxy
     function for the instance method described by *method_descriptor*.
 
-    :param class_: the class that owns *method_descriptor*
-    :param method_descriptor: the method descriptor of the instance
-                              method being traced (i.e. the function)
-    :param logging.Logger logger: the logger that will be used for
-                                  tracing call and return messages
+    :arg class_: the class that owns *method_descriptor*
+    :arg method_descriptor:
+       the method descriptor of the instance method being traced
+       (i.e. the function)
+    :arg logging.Logger logger:
+       the logger that will be used for tracing call and return messages
     :return: a method descriptor that returns the tracing proxy function
 
     When *logger* is not enabled for the :attr:`autologging.TRACE`
@@ -877,6 +884,8 @@ def _make_traceable_instancemethod(class_, method_descriptor, logger):
             log_delegator.trace_call(args, keywords)
             value = method(*args, **keywords)
             log_delegator.trace_return(value)
+            if isgenerator(value):
+                return _GeneratorIteratorTracingProxy(value, logger)
             return value
         else:
             return method(*args, **keywords)
@@ -899,11 +908,11 @@ def _make_traceable_classmethod(class_, method_descriptor, logger):
     """Create a method descriptor that returns the tracing proxy
     function for the class method described by *method_descriptor*.
 
-    :param class_: the class that owns *method_descriptor*
-    :param method_descriptor: the method descriptor of the instance
-                              method being traced
-    :param logging.Logger logger: the logger that will be used for
-                                  tracing call and return messages
+    :arg class_: the class that owns *method_descriptor*
+    :arg method_descriptor:
+       the method descriptor of the instance method being traced
+    :arg logging.Logger logger:
+       the logger that will be used for tracing call and return messages
     :return: a method descriptor that returns the tracing proxy function
 
     When *logger* is not enabled for the :attr:`autologging.TRACE`
@@ -929,6 +938,8 @@ def _make_traceable_classmethod(class_, method_descriptor, logger):
             log_delegator.trace_call(args, keywords)
             value = method(*args, **keywords)
             log_delegator.trace_return(value)
+            if isgenerator(value):
+                return _GeneratorIteratorTracingProxy(value, logger)
             return value
         else:
             return method(*args, **keywords)
@@ -950,11 +961,11 @@ def _make_traceable_staticmethod(class_, method_descriptor, logger):
     """Create a method descriptor that returns the tracing proxy
     function for the class method described by *method_descriptor*.
 
-    :param class_: the class that owns *method_descriptor*
-    :param method_descriptor: the method descriptor of the instance
-                              method being traced
-    :param logging.Logger logger: the logger that will be used for
-                                  tracing call and return messages
+    :arg class_: the class that owns *method_descriptor*
+    :arg method_descriptor:
+       the method descriptor of the instance method being traced
+    :arg logging.Logger logger:
+       the logger that will be used for tracing call and return messages
     :return: a method descriptor that returns the tracing proxy function
 
     When *logger* is not enabled for the :attr:`autologging.TRACE`
@@ -979,6 +990,8 @@ def _make_traceable_staticmethod(class_, method_descriptor, logger):
             log_delegator.trace_call(args, keywords)
             value = function(*args, **keywords)
             log_delegator.trace_return(value)
+            if isgenerator(value):
+                return _GeneratorIteratorTracingProxy(value, logger)
             return value
         else:
             return function(*args, **keywords)
@@ -1006,9 +1019,9 @@ class _TracingLoggerDelegator(object):
     def _find_last_line_number(f_code):
         """Return the last line number of a function.
 
-        :param types.CodeType f_code: the bytecode object for a
-                                      function, as obtained from
-                                      ``function.__code__``
+        :arg types.CodeType f_code:
+           the bytecode object for a function, as obtained from
+           ``function.__code__``
         :return: the last physical line number of the function
         :rtype: int
 
@@ -1033,8 +1046,9 @@ class _TracingLoggerDelegator(object):
 
     def __init__(self, logger, function):
         """
-        :param logging.Logger logger: the tracing logger
-        :param function: the function being traced
+        :arg logging.Logger logger: the tracing logger
+        :arg function: the function being traced
+
         """
         self._logger = logger
 
@@ -1065,7 +1079,7 @@ class _TracingLoggerDelegator(object):
     def isEnabledFor(self, level):
         """Whether or not the tracing logger is enabled for *level*.
 
-        :param int level: the logging level being queried
+        :arg int level: the logging level being queried
         :rtype: bool
 
         """
@@ -1102,10 +1116,12 @@ class _TracingLoggerDelegator(object):
     def trace_call(self, f_args, f_keywords):
         """Emit a CALL log record for the traced function.
 
-        :param tuple f_args: the positional arguments that were passed
-                             when the traced function was called
-        :param dict f_keywords: the keyword arguments that were passed
-                                when the traced function was called
+        :arg tuple f_args:
+           the positional arguments that were passed when the traced
+           function was called
+        :arg dict f_keywords:
+           the keyword arguments that were passed when the traced
+           function was called
 
         .. warning::
            This method does **not** perform a level check, and delegates
@@ -1128,8 +1144,8 @@ class _TracingLoggerDelegator(object):
     def trace_return(self, f_return):
         """Emit a RETURN log record for the traced function.
 
-        :param f_return: the value returned by the traced function when
-                         it was called
+        :arg f_return:
+           the value returned by the traced function when it was called
 
         .. warning::
            This method does **not** perform a level check, and delegates
@@ -1148,4 +1164,67 @@ class _TracingLoggerDelegator(object):
             None,               # exc_info
             func=self._f_name)
         self._logger.handle(return_record)
+
+
+class _GeneratorIteratorTracingProxy(object):
+    """Proxy the iterator protocol for a generator iterator to capture
+    and trace ``yield`` and ``StopIteration`` events.
+
+    """
+
+    #: An easily-queriable marker.
+    __autologging_traced__ = True
+
+    def __init__(self, generator_iterator, logger):
+        """
+        :arg GeneratorType generator_iterator:
+           a generator iterator returned by a traced function
+        :arg logging.Logger logger: the tracing logger
+        """
+        self._gi = generator_iterator
+        self._logger = logger
+
+    @property
+    def __wrapped__(self):
+        """The original generator iterator."""
+        return self._gi
+
+    def __iter__(self):
+        """Trace each ``yield`` and the terminating ``StopIteration``
+        for the wrapped generator iterator.
+
+        """
+        lineno = self._gi.gi_frame.f_lineno
+
+        for next_value in self._gi:
+            lineno = self._gi.gi_frame.f_lineno
+            self._logger.handle(logging.LogRecord(
+                self._logger.name,    # name
+                TRACE,                # level
+                self._gi.gi_code.co_filename,     # pathname
+                lineno, # lineno
+                "YIELD %r",           # msg
+                (next_value,),     # args
+                None,                 # exc_info
+                func=self._gi.__name__
+            ))
+            yield next_value
+
+        self._logger.handle(logging.LogRecord(
+            self._logger.name,  # name
+            TRACE,              # level
+            self._gi.gi_code.co_filename,   # pathname
+            lineno, # lineno
+            "STOP",             # msg
+            tuple(),            # args
+            None,               # exc_info
+            func=self._gi.__name__
+        ))
+
+    def __getattr__(self, name):
+        """Delegate unimplemented methods/properties to the original
+        generator iterator.
+
+        """
+        return getattr(self._gi, name)
 

@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="Autologging",
-    version="1.1.0",
+    version="1.2.0a0",
     description="Autologging makes logging and tracing Python classes easy.",
     long_description="""\
 Autologging eliminates boilerplate logging setup code and tracing code,
@@ -34,23 +34,31 @@ A specifically-named logger may also be passed to the decorator (i.e.
 **@traced**
 Decorate a class to provide **automatic** method call/return tracing. By
 default, all class, static, and instance methods are traced (excluding
-"__special__" methods, with the exception of ``__init__``).
+"__special__" methods, with the exception of ``__init__`` and ``__call__``).
 As with the ``logged`` decorator, the default name of the tracing logger
 matches the dotted-name of the containing class and may be overridden by
 passing a specifically-named logger to the decorator.
 Additionally, this decorator accepts multiple string arguments that
 explicitly name the methods to be traced (and may even name
 "__special__" methods).
+
 Module-level functions may also be traced using this decorator.
+
+*New in version 1.2.0:* automatic yield/stop tracing of Python
+generator iterators (if the generator function is traced).
 
 **TRACE**
 The ``autologging.TRACE`` (level 1) log level is registered with the
 Python ``logging`` module when Autologging is imported so that tracing
 can be configured and controlled independently of application logging.
+
+Tracing may be disabled entirely by setting the
+``AUTOLOGGING_TRACED_NOOP`` environment variable or by calling the
+``autologging.install_traced_noop()`` function.
 """,
     author="Matthew Zipay",
-    author_email="mattz@ninthtest.net",
-    url="http://www.ninthtest.net/python-autologging/",
+    author_email="mattz@ninthtest.info",
+    url="http://ninthtest.info/python-autologging/",
     download_url = "https://sourceforge.net/projects/autologging/files/",
     py_modules=["autologging"],
     test_suite="test.suite",
@@ -63,9 +71,9 @@ can be configured and controlled independently of application logging.
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Programming Language :: Python :: Implementation :: Stackless",
