@@ -63,6 +63,52 @@ Tracing may be disabled entirely by setting the
 `AUTOLOGGING_TRACED_NOOP` environment variable or by calling the
 `autologging.install_traced_noop()` function.
 
+## A brief example
+
+A simple logged and traced class:
+
+```python
+ 1 import logging
+ 2 import sys
+ 3
+ 4 from autologging import logged, TRACE, traced
+ 5
+ 6 @traced
+ 7 @logged
+ 8 class Example:
+ 9
+10     def __init__(self):
+11         self.__log.info("initialized")
+12
+13     def backwards(self, *words):
+14         for word in words:
+15             yield "".join(reversed(word))
+16
+17
+18 if __name__ == "__main__":
+19     logging.basicConfig(
+20             level=TRACE, stream=sys.stderr,
+21             format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s")
+22     example = Example()
+23     for result in example.backwards("spam", "eggs"):
+24         print(result)
+```
+
+Logging and tracing output:
+
+```bash
+$ python example.py
+TRACE:example.py,10:__main__.Example.__init__:CALL *() **{}
+INFO:example.py,11:__main__.Example.__init__:initialized
+TRACE:example.py,13:__main__.Example.backwards:CALL *('spam', 'eggs') **{}
+TRACE:example.py,15:__main__.Example.backwards:RETURN <generator object backwards at 0x7fa534d61eb0>
+TRACE:example.py,15:__main__.Example.backwards:YIELD 'maps'
+maps
+TRACE:example.py,15:__main__.Example.backwards:YIELD 'sgge'
+sgge
+TRACE:example.py,15:__main__.Example.backwards:STOP
+```
+
 ## Installation
 
 The easiest way to install Autologging is to use
