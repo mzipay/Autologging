@@ -87,7 +87,7 @@ class TracedClass(object):
     class NestedClass(object):
 
         def __init__(self): #TC.NC.__i__:L1
-            self.format_string = "TC.NC.%s %s and %s"   #TC.NC.__i__:LN
+            self.format_string = "TC.NC.%s %s and %s"
 
     @traced(named_tracer, "method")
     class __InternalNestedClass(object):
@@ -107,7 +107,7 @@ class TracedClass(object):
         return "%s.c_m %s and %s" % (cls.ABBREV, arg, keyword)  #TC.c_m:LN
 
     def __init__(self): #TC.__i__:L1
-        self.format_string = "TC.%s %s and %s" #TC.__i__:LN
+        self.format_string = "TC.%s %s and %s"
 
     def __call__(self): #TC.__c__:L1
         return "TC.__call__" #TC.__c__:LN
@@ -134,7 +134,7 @@ class LoggedAndTracedClass:
     class NestedClass:
 
         def __init__(self): #LATC.NC.__i__:L1
-            self.__log.info("LATC.NC.__i__ message")    #LATC.NC.__i__:LN
+            self.__log.info("LATC.NC.__i__ message")
 
         def __call__(self, arg): #LATC.NC.__c__:L1
             self.__log.info("LATC.NC.__c__ message")
@@ -145,7 +145,7 @@ class LoggedAndTracedClass:
     class _NonPublicNestedClass:
 
         def __init__(self): #LATC._NPNC.__i__:L1
-            self.__log.info("LATC._NPNC.__i__ message") #LATC._NPNC.__i__:LN
+            self.__log.info("LATC._NPNC.__i__ message")
 
     @traced(named_tracer, "method")
     @logged(named_logger)

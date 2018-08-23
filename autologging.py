@@ -748,8 +748,7 @@ def _install_traceable_methods(class_, *method_names, **keywords):
             warnings.warn("tracing not supported for %r" % descriptor_type)
             continue
 
-        tracing_proxy_descriptor = make_traceable_method(
-            class_, descriptor, logger)
+        tracing_proxy_descriptor = make_traceable_method(descriptor, logger)
 
         # class_.__dict__ is a mappingproxy; direct assignment not supported
         setattr(class_, method_name, tracing_proxy_descriptor)
@@ -848,11 +847,10 @@ def _is_special_name(name):
     return name.startswith("__") and name.endswith("__")
 
 
-def _make_traceable_instancemethod(class_, method_descriptor, logger):
+def _make_traceable_instancemethod(method_descriptor, logger):
     """Create a method descriptor that returns the tracing proxy
     function for the instance method described by *method_descriptor*.
 
-    :arg class_: the class that owns *method_descriptor*
     :arg method_descriptor:
        the method descriptor of the instance method being traced
        (i.e. the function)
@@ -905,11 +903,10 @@ def _make_traceable_instancemethod(class_, method_descriptor, logger):
     return autologging_traced_instancemethod_proxy
 
 
-def _make_traceable_classmethod(class_, method_descriptor, logger):
+def _make_traceable_classmethod(method_descriptor, logger):
     """Create a method descriptor that returns the tracing proxy
     function for the class method described by *method_descriptor*.
 
-    :arg class_: the class that owns *method_descriptor*
     :arg method_descriptor:
        the method descriptor of the instance method being traced
     :arg logging.Logger logger:
@@ -958,11 +955,10 @@ def _make_traceable_classmethod(class_, method_descriptor, logger):
     return classmethod(autologging_traced_classmethod_proxy)
 
 
-def _make_traceable_staticmethod(class_, method_descriptor, logger):
+def _make_traceable_staticmethod(method_descriptor, logger):
     """Create a method descriptor that returns the tracing proxy
     function for the class method described by *method_descriptor*.
 
-    :arg class_: the class that owns *method_descriptor*
     :arg method_descriptor:
        the method descriptor of the instance method being traced
     :arg logging.Logger logger:

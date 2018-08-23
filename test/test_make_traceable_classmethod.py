@@ -71,20 +71,20 @@ class MakeTraceableClassmethodTest(unittest.TestCase):
 
     def test_creates_proxy_descriptor(self):
         proxy = _make_traceable_classmethod(
-            SampleClass, SampleClass.__dict__["method"], named_tracer)
+            SampleClass.__dict__["method"], named_tracer)
 
         self.assertTrue(hasattr(proxy.__func__, "__autologging_traced__"))
 
     def test_wraps_original_unbound_function(self):
         proxy = _make_traceable_classmethod(
-            SampleClass, SampleClass.__dict__["method"], named_tracer)
+            SampleClass.__dict__["method"], named_tracer)
 
         self.assertTrue(
             proxy.__func__.__wrapped__ is _original_method_descriptor.__func__)
 
     def test_uses_specified_logger(self):
         proxy = _make_traceable_classmethod(
-            SampleClass, SampleClass.__dict__["method"], named_tracer)
+            SampleClass.__dict__["method"], named_tracer)
 
         self.assertTrue(
             proxy.__func__._trace_log_delegator._logger is named_tracer)
@@ -92,7 +92,7 @@ class MakeTraceableClassmethodTest(unittest.TestCase):
     def test_with_trace_enabled_emits_log_records(self):
         named_tracer.setLevel(TRACE)
         proxy = _make_traceable_classmethod(
-            SampleClass, SampleClass.__dict__["method"], named_tracer)
+            SampleClass.__dict__["method"], named_tracer)
         setattr(SampleClass, "method", proxy)
         SampleClass.method()
 
@@ -110,7 +110,7 @@ class MakeTraceableClassmethodTest(unittest.TestCase):
     def test_with_trace_disabled_does_not_emit_log_records(self):
         named_tracer.setLevel(logging.DEBUG)
         proxy = _make_traceable_classmethod(
-            SampleClass, SampleClass.__dict__["method"], named_tracer)
+            SampleClass.__dict__["method"], named_tracer)
         setattr(SampleClass, "method", proxy)
         SampleClass.method()
 
