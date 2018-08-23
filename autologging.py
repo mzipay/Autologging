@@ -883,7 +883,8 @@ def _make_traceable_instancemethod(class_, method_descriptor, logger):
         if log_delegator.isEnabledFor(TRACE):
             log_delegator.trace_call(args, keywords)
             value = method(*args, **keywords)
-            log_delegator.trace_return(value)
+            if method_descriptor.__name__ != "__init__":
+                log_delegator.trace_return(value)
             if isgenerator(value):
                 return _GeneratorIteratorTracingProxy(value, logger)
             return value
