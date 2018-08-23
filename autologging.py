@@ -973,35 +973,8 @@ def _make_traceable_staticmethod(method_descriptor, logger):
     ``__func__.__wrapped__`` attribute.
 
     """
-    function = method_descriptor.__func__
-
-    log_delegator = _TracingLoggerDelegator(logger, function)
-
-    @wraps(function)
-    def autologging_traced_staticmethod_proxy(*args, **keywords):
-        # don't access from closure (IronPython does not manage
-        # co_freevars/__closure__ correctly)
-        log_delegator = \
-            autologging_traced_staticmethod_proxy._trace_log_delegator
-        if log_delegator.isEnabledFor(TRACE):
-            log_delegator.trace_call(args, keywords)
-            value = function(*args, **keywords)
-            log_delegator.trace_return(value)
-            if isgenerator(value):
-                return _GeneratorIteratorTracingProxy(value, logger)
-            return value
-        else:
-            return function(*args, **keywords)
-
-    # NOT a logging.Logger subclass, but does implement read-only properties
-    # and methods that mimic the public logging.Logger interface
-    autologging_traced_staticmethod_proxy._trace_log_delegator = log_delegator
-
-    if not hasattr(autologging_traced_staticmethod_proxy, "__wrapped__"):
-        # __wrapped__ is only set by functools.wraps() in Python 3.2+
-        autologging_traced_staticmethod_proxy.__wrapped__ = function
-
-    autologging_traced_staticmethod_proxy.__autologging_traced__ = True
+    autologging_traced_staticmethod_proxy = _make_traceable_function(
+            method_descriptor.__func__, logger)
 
     return staticmethod(autologging_traced_staticmethod_proxy)
 
