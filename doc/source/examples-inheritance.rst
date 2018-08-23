@@ -25,8 +25,8 @@ The following example illustrates these concepts::
    from autologging import logged, traced
 
 
-   @logged
    @traced
+   @logged
    class Base:
 
       # this method will be traced

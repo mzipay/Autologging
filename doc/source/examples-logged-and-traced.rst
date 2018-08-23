@@ -19,8 +19,8 @@ Add logging and tracing to a class
    from autologging import logged, traced
 
 
-   @logged
    @traced
+   @logged
    class MyClass:
 
       def __init__(self, value):

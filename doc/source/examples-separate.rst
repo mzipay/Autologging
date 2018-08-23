@@ -38,8 +38,8 @@ In the example module below, we have logged and traced a simple class::
    from autologging import logged, traced
 
 
-   @logged
    @traced
+   @logged
    class MyClass:
 
       def my_method(self, arg, keyword=None):

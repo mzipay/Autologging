@@ -7,6 +7,7 @@ Using the ``@traced`` decorator
 * :ref:`module-traced-class`
 * :ref:`named-traced-class`
 * :ref:`specific-traced-methods`
+* :ref:`traced-generators`
 * :ref:`traced-nested-class`
 * :ref:`module-traced-function`
 * :ref:`named-traced-function`
@@ -18,7 +19,7 @@ Using the ``@traced`` decorator
    prefer to decorate the class itself, explicitly identifying the
    method names to trace if the default (all class, static, and instance
    methods, excluding "__special__" methods, with the exception of
-   "__init__") doesn't suit your needs.
+   ``__init__`` and ``__call__``) doesn't suit your needs.
 
 .. _module-traced-class:
 
@@ -157,6 +158,68 @@ as the *first* argument (not shown below).
    TRACE:my_module.MyClass:__eq__:CALL *(79,) **{}
    TRACE:my_module.MyClass:__eq__:RETURN False
    False
+
+.. _traced-generators:
+
+Trace a generator iterator
+==========================
+
+.. versionadded:: 1.2.0
+
+`Generator <https://docs.python.org/3/glossary.html#term-generator>`_
+functions employ the ``yield`` keyword in the function body, instructing
+Python to create (and return) a `generator iterator
+<https://docs.python.org/3/glossary.html#term-generator-iterator>`_ when
+the function is invoked::
+
+   # my_module.py
+
+   from autologging import traced
+
+
+   @traced
+   class MyClass:
+
+       def my_iter(self, word):
+           for character in reversed(word):
+               yield character.upper()
+
+To observe how Autologging traces both the *generator* and its
+returned *generator iterator*, assume we run the program like so::
+
+   >>> import logging, sys
+   >>> from autologging import TRACE
+   >>> logging.basicConfig(level=TRACE, stream=sys.stdout,
+   ...     format="%(levelname)s:%(name)s:%(funcName)s:%(message)s")
+   >>> from my_module import MyClass
+   >>> my_obj = MyClass()
+   >>> for c in my_obj.my_iter("spam"):
+   ...     print(c)
+   ... 
+   (continued below)
+
+
+Because the *generator* function ``my_iter`` is traced, Autologging will
+dutifully emit the CALL/RETURN trace logging records::
+
+   TRACE:my_module.MyClass:my_iter:CALL *('spam',) **{}
+   TRACE:my_module.MyClass:my_iter:RETURN <generator object MyClass.my_iter at 0x7f54f4043840>
+   (continued below)
+
+In versions of Autologging **prior to 1.2.0**, this would be the only
+tracing output. But as of version 1.2.0, the *generator iterator* is
+now traced as well, and will emit additional YIELD/STOP trace logging
+records::
+
+   TRACE:my_module.MyClass:my_iter:YIELD 'M'
+   M
+   TRACE:my_module.MyClass:my_iter:YIELD 'A'
+   A
+   TRACE:my_module.MyClass:my_iter:YIELD 'P'
+   P
+   TRACE:my_module.MyClass:my_iter:YIELD 'S'
+   S
+   TRACE:my_module.MyClass:my_iter:STOP
 
 .. _traced-nested-class:
 

@@ -108,8 +108,8 @@ in less code that's more readable and easier to maintain::
 
    from autologging import logged, traced
 
-   @logged
    @traced
+   @logged
    class MyClass:
 
       def my_method(self, arg, keyword=None):
