@@ -168,7 +168,7 @@ class InstallTraceableMethodsTest(unittest.TestCase):
             descriptor = SampleClass.__dict__[traced_method_name]
             self.assertEqual(
                 "%s.SampleClass" % __name__,
-                descriptor.__func__._trace_log_delegator.name)
+                descriptor.__func__._tracing_proxy.logger.name)
 
         for traced_method_name in [
                 "__init__",
@@ -178,7 +178,7 @@ class InstallTraceableMethodsTest(unittest.TestCase):
             descriptor = SampleClass.__dict__[traced_method_name]
             self.assertEqual(
                 "%s.SampleClass" % __name__,
-                descriptor._trace_log_delegator.name)
+                descriptor._tracing_proxy.logger.name)
 
     def test_traces_with_named_logger(self):
         _install_traceable_methods(SampleClass, logger=named_logger)
@@ -189,7 +189,7 @@ class InstallTraceableMethodsTest(unittest.TestCase):
             descriptor = SampleClass.__dict__[traced_method_name]
             self.assertEqual(
                 named_logger.name,
-                descriptor.__func__._trace_log_delegator.name)
+                descriptor.__func__._tracing_proxy.logger.name)
 
         for traced_method_name in [
                 "__init__",
@@ -199,7 +199,7 @@ class InstallTraceableMethodsTest(unittest.TestCase):
             descriptor = SampleClass.__dict__[traced_method_name]
             self.assertEqual(
                 named_logger.name,
-                descriptor._trace_log_delegator.name)
+                descriptor._tracing_proxy.logger.name)
 
 
 def suite():

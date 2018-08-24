@@ -27,11 +27,11 @@ __author__ = "Matthew Zipay <mattz@ninthtest.info>"
 __version__ = "1.2.0b0"
 
 from functools import wraps
-from inspect import isclass, isgenerator, isroutine
+from inspect import isclass, isgenerator, ismethod, isroutine
 import logging
 import os
 import sys
-from types import FunctionType, GeneratorType
+from types import FunctionType
 import warnings
 
 __all__ = [
@@ -213,7 +213,7 @@ def traced(*args):
 
     .. rubric:: Trace an unbound function using the default logger
 
-    :arg FunctionType func: the unbound function to be traced
+    :arg func: the unbound function to be traced
 
     By default, a logger named for the function's module is used:
 
@@ -667,43 +667,51 @@ def _add_logger_to(obj, logger_name=None):
 
 
 def _make_traceable_function(function, logger):
-    """Return a tracing proxy function for *function*.
+    """Create a function that delegates to either a tracing proxy or
+    the original *function*.
 
-    :arg function: an unbound, module-level (or nested) function
-    :arg logging.Logger logger: the logger for tracing messages
+    :arg function:
+       an unbound, module-level (or nested) function
+    :arg logging.Logger logger: the tracing logger
     :return:
-       a proxy function that wraps *function* to provide the call and
-       return tracing
+       a function that wraps *function* to provide the call and return
+       tracing support
+
+    If *logger* is not enabled for the :attr:`autologging.TRACE`
+    level **at the time the returned delegator function is invoked**,
+    then the original *function* is called instead of the tracing proxy.
+
+    The overhead that a ``@traced`` function incurs when tracing is
+    **disabled** is:
+
+    * the delegator function call itself
+    * the ``TRACE`` level check.
+
+    The original *function* is available from the delegator function's
+    ``__wrapped__`` attribute.
 
     """
-    log_delegator = _TracingLoggerDelegator(logger, function)
+    proxy = _FunctionTracingProxy(function, logger)
 
     @wraps(function)
-    def autologging_traced_function_proxy(*args, **keywords):
-        # don't access from closure (IronPython does not manage
-        # co_freevars/__closure__ correctly)
-        log_delegator = autologging_traced_function_proxy._trace_log_delegator
-        if log_delegator.isEnabledFor(TRACE):
-            log_delegator.trace_call(args, keywords)
-            value = function(*args, **keywords)
-            log_delegator.trace_return(value)
-            if isgenerator(value):
-                return _GeneratorIteratorTracingProxy(value, logger)
-            return value
+    def autologging_traced_function_delegator(*args, **keywords):
+        if logger.isEnabledFor(TRACE):
+            # don't access the proxy from closure (IronPython does not manage
+            # co_freevars/__closure__ correctly for local vars)
+            proxy = autologging_traced_function_delegator._tracing_proxy
+            return proxy(function, args, keywords)
         else:
             return function(*args, **keywords)
 
-    # NOT a logging.Logger subclass, but does implement read-only properties
-    # and methods that mimic the public logging.Logger interface
-    autologging_traced_function_proxy._trace_log_delegator = log_delegator
+    autologging_traced_function_delegator._tracing_proxy = proxy
 
-    if not hasattr(autologging_traced_function_proxy, "__wrapped__"):
+    if not hasattr(autologging_traced_function_delegator, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
-        autologging_traced_function_proxy.__wrapped__ = function
+        autologging_traced_function_delegator.__wrapped__ = function
 
-    autologging_traced_function_proxy.__autologging_traced__ = True
+    autologging_traced_function_delegator.__autologging_traced__ = True
 
-    return autologging_traced_function_proxy
+    return autologging_traced_function_delegator
 
 
 # can't use option=<default> keywords with *args in Python 2.7 (see PEP-3102)
@@ -847,141 +855,148 @@ def _is_special_name(name):
     return name.startswith("__") and name.endswith("__")
 
 
-def _make_traceable_instancemethod(method_descriptor, logger):
-    """Create a method descriptor that returns the tracing proxy
-    function for the instance method described by *method_descriptor*.
+def _make_traceable_instancemethod(unbound_function, logger):
+    """Create an unbound function that delegates to either a tracing
+    proxy or the original *unbound_function*.
 
-    :arg method_descriptor:
-       the method descriptor of the instance method being traced
-       (i.e. the function)
-    :arg logging.Logger logger:
-       the logger that will be used for tracing call and return messages
-    :return: a method descriptor that returns the tracing proxy function
+    :arg unbound_function:
+       the unbound function for the instance method being traced
+    :arg logging.Logger logger: the tracing logger
+    :return:
+       an unbound function that wraps *unbound_function* to provide the
+       call and return tracing support
 
-    When *logger* is not enabled for the :attr:`autologging.TRACE`
-    level, the tracing proxy function will delegate directly to the
-    original instance method.
+    If *logger* is not enabled for the :attr:`autologging.TRACE`
+    level **at the time the returned delegator function is invoked**,
+    then the method for the original *unbound_function* is called
+    instead of the tracing proxy.
 
-    The original unbound function is available from the proxy
-    descriptor's ``__func__.__wrapped__`` attribute.
+    The overhead that a ``@traced`` instance method incurs when tracing
+    is **disabled** is:
+
+    * the delegator function call itself
+    * binding the original *unbound_function* to the instance
+    * the ``TRACE`` level check
+
+    The original *unbound_function* is available from the delegator
+    function's ``__wrapped__`` attribute.
 
     """
     # functions have a __get__ method; they can act as descriptors
-    function = method_descriptor
+    proxy = _FunctionTracingProxy(unbound_function, logger)
 
-    log_delegator = _TracingLoggerDelegator(logger, function)
-
-    @wraps(function)
-    def autologging_traced_instancemethod_proxy(f_self, *args, **keywords):
-        method = method_descriptor.__get__(f_self, f_self.__class__)
-        # don't access from closure (IronPython does not manage
-        # co_freevars/__closure__ correctly)
-        log_delegator = \
-            autologging_traced_instancemethod_proxy._trace_log_delegator
-        if log_delegator.isEnabledFor(TRACE):
-            log_delegator.trace_call(args, keywords)
-            value = method(*args, **keywords)
-            if method_descriptor.__name__ != "__init__":
-                log_delegator.trace_return(value)
-            if isgenerator(value):
-                return _GeneratorIteratorTracingProxy(value, logger)
-            return value
+    @wraps(unbound_function)
+    def autologging_traced_instancemethod_delegator(self_, *args, **keywords):
+        method = unbound_function.__get__(self_, self_.__class__)
+        if logger.isEnabledFor(TRACE):
+            # don't access the proxy from closure (IronPython does not manage
+            # co_freevars/__closure__ correctly for local vars)
+            proxy = \
+                autologging_traced_instancemethod_delegator._tracing_proxy
+            return proxy(method, args, keywords)
         else:
             return method(*args, **keywords)
 
-    # NOT a logging.Logger subclass, but does implement read-only properties
-    # and methods that mimic the public logging.Logger interface
-    autologging_traced_instancemethod_proxy._trace_log_delegator = \
-        log_delegator
+    autologging_traced_instancemethod_delegator._tracing_proxy = proxy
 
-    if not hasattr(autologging_traced_instancemethod_proxy, "__wrapped__"):
+    if not hasattr(
+            autologging_traced_instancemethod_delegator, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
-        autologging_traced_instancemethod_proxy.__wrapped__ = function
+        autologging_traced_instancemethod_delegator.__wrapped__ = \
+                unbound_function
 
-    autologging_traced_instancemethod_proxy.__autologging_traced__ = True
+    autologging_traced_instancemethod_delegator.__autologging_traced__ = True
 
-    return autologging_traced_instancemethod_proxy
+    return autologging_traced_instancemethod_delegator
 
 
 def _make_traceable_classmethod(method_descriptor, logger):
-    """Create a method descriptor that returns the tracing proxy
-    function for the class method described by *method_descriptor*.
+    """Create a method descriptor that delegates to either a tracing
+    proxy or the original *method_descriptor*.
 
     :arg method_descriptor:
-       the method descriptor of the instance method being traced
-    :arg logging.Logger logger:
-       the logger that will be used for tracing call and return messages
-    :return: a method descriptor that returns the tracing proxy function
+       the method descriptor for the class method being traced
+    :arg logging.Logger logger: the tracing logger
+    :return:
+       a method descriptor that wraps the *method_descriptor* function
+       to provide the call and return tracing support
 
-    When *logger* is not enabled for the :attr:`autologging.TRACE`
-    level, the tracing proxy function will delegate directly to the
-    original class method.
+    If *logger* is not enabled for the :attr:`autologging.TRACE`
+    level **at the time the returned delegator method descriptor is
+    invoked**, then the method for the original *method_descriptor* is
+    called instead of the tracing proxy.
 
-    The original class method is available from the proxy descriptor's
-    ``__func__.__wrapped__`` attribute.
+    The overhead that a ``@traced`` class method incurs when tracing is
+    **disabled** is:
+
+    * the delegator function call itself
+    * binding the original *method_descriptor* to the class
+    * the ``TRACE`` level check
+
+    The original *method_descriptor* function is available from the
+    delegator method descriptor's ``__func__.__wrapped__`` attribute.
 
     """
     function = method_descriptor.__func__
-
-    log_delegator = _TracingLoggerDelegator(logger, function)
+    proxy = _FunctionTracingProxy(function, logger)
 
     @wraps(function)
-    def autologging_traced_classmethod_proxy(f_cls, *args, **keywords):
-        method = method_descriptor.__get__(None, f_cls)
-        # don't access from closure (IronPython does not manage
-        # co_freevars/__closure__ correctly)
-        log_delegator = \
-            autologging_traced_classmethod_proxy._trace_log_delegator
-        if log_delegator.isEnabledFor(TRACE):
-            log_delegator.trace_call(args, keywords)
-            value = method(*args, **keywords)
-            log_delegator.trace_return(value)
-            if isgenerator(value):
-                return _GeneratorIteratorTracingProxy(value, logger)
-            return value
+    def autologging_traced_classmethod_delegator(cls, *args, **keywords):
+        method = method_descriptor.__get__(None, cls)
+        if logger.isEnabledFor(TRACE):
+            # don't access the proxy from closure (IronPython does not manage
+            # co_freevars/__closure__ correctly for local vars)
+            proxy = autologging_traced_classmethod_delegator._tracing_proxy
+            return proxy(method, args, keywords)
         else:
             return method(*args, **keywords)
 
-    # NOT a logging.Logger subclass, but does implement read-only properties
-    # and methods that mimic the public logging.Logger interface
-    autologging_traced_classmethod_proxy._trace_log_delegator = log_delegator
+    autologging_traced_classmethod_delegator._tracing_proxy = proxy
 
-    if not hasattr(autologging_traced_classmethod_proxy, "__wrapped__"):
+    if not hasattr(autologging_traced_classmethod_delegator, "__wrapped__"):
         # __wrapped__ is only set by functools.wraps() in Python 3.2+
-        autologging_traced_classmethod_proxy.__wrapped__ = function
+        autologging_traced_classmethod_delegator.__wrapped__ = function
 
-    autologging_traced_classmethod_proxy.__autologging_traced__ = True
+    autologging_traced_classmethod_delegator.__autologging_traced__ = True
 
-    return classmethod(autologging_traced_classmethod_proxy)
+    return classmethod(autologging_traced_classmethod_delegator)
 
 
 def _make_traceable_staticmethod(method_descriptor, logger):
-    """Create a method descriptor that returns the tracing proxy
-    function for the class method described by *method_descriptor*.
+    """Create a method descriptor that delegates to either a tracing
+    proxy or the original *method_descriptor*.
 
     :arg method_descriptor:
-       the method descriptor of the instance method being traced
-    :arg logging.Logger logger:
-       the logger that will be used for tracing call and return messages
-    :return: a method descriptor that returns the tracing proxy function
+       the method descriptor for the static method being traced
+    :arg logging.Logger logger: the tracing logger
+    :return:
+       a method descriptor that wraps the *method_descriptor* function
+       to provide the call and return tracing support
 
-    When *logger* is not enabled for the :attr:`autologging.TRACE`
-    level, the tracing proxy function will delegate directly to the
-    original class method.
+    If *logger* is not enabled for the :attr:`autologging.TRACE`
+    level **at the time the returned delegator method descriptor is
+    invoked**, then the method for the original *method_descriptor* is
+    called instead of the tracing proxy.
 
-    The original class method is available from the proxy descriptor's
-    ``__func__.__wrapped__`` attribute.
+    The overhead that a ``@traced`` static method incurs when tracing is
+    **disabled** is:
+
+    * the delegator function call itself
+    * the ``TRACE`` level check
+
+    The original *method_descriptor* function is available from the
+    delegator method descriptor's ``__func__.__wrapped__`` attribute.
 
     """
-    autologging_traced_staticmethod_proxy = _make_traceable_function(
+    autologging_traced_staticmethod_delegator = _make_traceable_function(
             method_descriptor.__func__, logger)
 
-    return staticmethod(autologging_traced_staticmethod_proxy)
+    return staticmethod(autologging_traced_staticmethod_delegator)
 
 
-class _TracingLoggerDelegator(object):
-    """Build CALL/RETURN log records and delegate logging to a specified
-    tracing logger.
+class _FunctionTracingProxy(object):
+    """Proxy a function invocation to capture and log the call arguments
+    and return value.
 
     """
 
@@ -1014,84 +1029,32 @@ class _TracingLoggerDelegator(object):
 
         return last_line_number
 
-    def __init__(self, logger, function):
+    def __init__(self, function, logger):
         """
-        :arg logging.Logger logger: the tracing logger
         :arg function: the function being traced
+        :arg logging.Logger logger: the tracing logger
 
         """
+        func_code = function.__code__
+        self._func_filename = func_code.co_filename
+        self._func_firstlineno = func_code.co_firstlineno
+        self._func_lastlineno = self._find_last_line_number(func_code)
+
         self._logger = logger
 
-        f_code = function.__code__
-        self._f_filename = f_code.co_filename
-        self._f_firstlineno = f_code.co_firstlineno
-        self._f_lastlineno = self._find_last_line_number(f_code)
-        self._f_name = function.__name__
-
     @property
-    def name(self):
-        """The name (channel) used by the tracing logger.
+    def logger(self):
+        """The tracing logger for the function."""
+        return self._logger
 
-        :rtype: str
+    def __call__(self, function, args, keywords):
+        """Call *function*, tracing its arguments and return value.
 
-        """
-        return self._logger.name
-
-    @property
-    def propagate(self):
-        """Whether or not the tracing logger propagates to its parent.
-
-        :rtype: bool
-
-        """
-        return self._logger.propagate
-
-    def isEnabledFor(self, level):
-        """Whether or not the tracing logger is enabled for *level*.
-
-        :arg int level: the logging level being queried
-        :rtype: bool
-
-        """
-        return self._logger.isEnabledFor(level)
-
-    def getEffectiveLevel(self):
-        """Return the effective level for the tracing logger.
-
-        :rtype: int
-
-        """
-        return self._logger.getEffectiveLevel()
-
-    def hasHandlers(self):
-        """Whether or not any handlers are registered for the tracing
-        logger.
-
-        :rtype: bool
-
-        """
-        # adapted from Python 3.5 logging module
-        c = self._logger
-        rv = False
-        while c:
-            if c.handlers:
-                rv = True 
-                break
-            if not c.propagate:
-                break
-            else:
-                c = c.parent
-        return rv
-
-    def trace_call(self, f_args, f_keywords):
-        """Emit a CALL log record for the traced function.
-
-        :arg tuple f_args:
-           the positional arguments that were passed when the traced
-           function was called
-        :arg dict f_keywords:
-           the keyword arguments that were passed when the traced
-           function was called
+        :arg tuple args: the positional arguments for *function*
+        :arg dict keywords: the keyword arguments for *function*
+        :return:
+           the value returned by calling *function* with positional
+           arguments *args* and keyword arguments *keywords*
 
         .. warning::
            This method does **not** perform a level check, and delegates
@@ -1099,41 +1062,39 @@ class _TracingLoggerDelegator(object):
            expected to perform the level check prior to calling this
            method.
 
+        .. note::
+           If the return value of *function* is a `generator iterator
+           <https://docs.python.org/3/glossary.html#term-generator-iterator>`_,
+           then this method returns *value* wrapped in a
+           :class:`_GeneratorIteratorTracingProxy` object to provide the
+           ``yield`` and ``StopIteration`` tracing support.
+
         """
-        call_record = logging.LogRecord(
+        self._logger.handle(logging.LogRecord(
             self._logger.name,      # name
             TRACE,                  # level
-            self._f_filename,       # pathname
-            self._f_firstlineno,    # lineno
+            self._func_filename,    # pathname
+            self._func_firstlineno, # lineno
             "CALL *%r **%r",        # msg
-            (f_args, f_keywords),   # args
+            (args, keywords),       # args
             None,                   # exc_info
-            func=self._f_name)
-        self._logger.handle(call_record)
+            func=function.__name__))
 
-    def trace_return(self, f_return):
-        """Emit a RETURN log record for the traced function.
+        value = function(*args, **keywords)
 
-        :arg f_return:
-           the value returned by the traced function when it was called
+        if function.__name__ != "__init__":
+            self._logger.handle(logging.LogRecord(
+                self._logger.name,     # name
+                TRACE,                 # level
+                self._func_filename,   # pathname
+                self._func_lastlineno, # lineno
+                "RETURN %r",           # msg
+                (value,),              # args
+                None,                  # exc_info
+                func=function.__name__))
 
-        .. warning::
-           This method does **not** perform a level check, and delegates
-           *directly* to :meth:`logging.Logger.handle`. The caller is
-           expected to perform the level check prior to calling this
-           method.
-
-        """
-        return_record = logging.LogRecord(
-            self._logger.name,  # name
-            TRACE,              # level
-            self._f_filename,   # pathname
-            self._f_lastlineno, # lineno
-            "RETURN %r",        # msg
-            (f_return,),        # args
-            None,               # exc_info
-            func=self._f_name)
-        self._logger.handle(return_record)
+            return (_GeneratorIteratorTracingProxy(value, self._logger)
+                    if isgenerator(value) else value)
 
 
 class _GeneratorIteratorTracingProxy(object):
@@ -1147,7 +1108,7 @@ class _GeneratorIteratorTracingProxy(object):
 
     def __init__(self, generator_iterator, logger):
         """
-        :arg GeneratorType generator_iterator:
+        :arg types.GeneratorType generator_iterator:
            a generator iterator returned by a traced function
         :arg logging.Logger logger: the tracing logger
         """
@@ -1159,6 +1120,8 @@ class _GeneratorIteratorTracingProxy(object):
         """The original generator iterator."""
         return self._gi
 
+    # NOTE: implement __iter__ instead of next/__next__ for simpler
+    # Python 2/3 compatibility
     def __iter__(self):
         """Trace each ``yield`` and the terminating ``StopIteration``
         for the wrapped generator iterator.

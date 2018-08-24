@@ -33,12 +33,7 @@ __author__ = "Matthew Zipay <mattz@ninthtest.info>"
 import logging
 import unittest
 
-from autologging import (
-    _generate_logger_name,
-    _make_traceable_classmethod,
-    TRACE,
-    __version__,
-)
+from autologging import _make_traceable_classmethod, TRACE, __version__
 
 from test import list_handler, named_tracer
 
@@ -69,49 +64,50 @@ class MakeTraceableClassmethodTest(unittest.TestCase):
     def tearDown(self):
         setattr(SampleClass, "method", _original_method_descriptor)
 
-    def test_creates_proxy_descriptor(self):
-        proxy = _make_traceable_classmethod(
+    def test_creates_delegator_descriptor(self):
+        delegator = _make_traceable_classmethod(
             SampleClass.__dict__["method"], named_tracer)
 
-        self.assertTrue(hasattr(proxy.__func__, "__autologging_traced__"))
+        self.assertTrue(delegator.__func__.__autologging_traced__)
 
     def test_wraps_original_unbound_function(self):
-        proxy = _make_traceable_classmethod(
+        delegator = _make_traceable_classmethod(
             SampleClass.__dict__["method"], named_tracer)
 
         self.assertTrue(
-            proxy.__func__.__wrapped__ is _original_method_descriptor.__func__)
+                delegator.__func__.__wrapped__
+                    is _original_method_descriptor.__func__)
 
     def test_uses_specified_logger(self):
-        proxy = _make_traceable_classmethod(
+        delegator = _make_traceable_classmethod(
             SampleClass.__dict__["method"], named_tracer)
 
         self.assertTrue(
-            proxy.__func__._trace_log_delegator._logger is named_tracer)
+                delegator.__func__._tracing_proxy.logger is named_tracer)
 
     def test_with_trace_enabled_emits_log_records(self):
         named_tracer.setLevel(TRACE)
-        proxy = _make_traceable_classmethod(
+        delegator = _make_traceable_classmethod(
             SampleClass.__dict__["method"], named_tracer)
-        setattr(SampleClass, "method", proxy)
+        setattr(SampleClass, "method", delegator)
         SampleClass.method()
 
         self.assertEqual(2, len(list_handler.records))
 
         call_record = list_handler.records[0]
         self.assertEqual(
-            proxy.__func__.__wrapped__.__name__, call_record.funcName)
+            delegator.__func__.__wrapped__.__name__, call_record.funcName)
         self.assertEqual("CALL *() **{}", call_record.getMessage())
         return_record = list_handler.records[1]
         self.assertEqual(
-            proxy.__func__.__wrapped__.__name__, return_record.funcName)
+            delegator.__func__.__wrapped__.__name__, return_record.funcName)
         self.assertEqual("RETURN None", return_record.getMessage())
 
     def test_with_trace_disabled_does_not_emit_log_records(self):
         named_tracer.setLevel(logging.DEBUG)
-        proxy = _make_traceable_classmethod(
+        delegator = _make_traceable_classmethod(
             SampleClass.__dict__["method"], named_tracer)
-        setattr(SampleClass, "method", proxy)
+        setattr(SampleClass, "method", delegator)
         SampleClass.method()
 
         self.assertEqual(0, len(list_handler.records))

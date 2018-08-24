@@ -166,7 +166,7 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
     def test_nested_classes_have_qualname_logger_name(self):
         self.assertEqual(
             "test.dummy.TracedClass.NestedClass",
-            TracedClass.NestedClass.__dict__["__init__"]._trace_log_delegator.name)
+            TracedClass.NestedClass.__dict__["__init__"]._tracing_proxy.logger.name)
 
     def test_nested_class_instance_method_tracing_log_records(self):
         obj = TracedClass.NestedClass()

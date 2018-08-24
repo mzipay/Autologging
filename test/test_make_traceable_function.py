@@ -56,40 +56,38 @@ class MakeTraceableFunctionTest(unittest.TestCase):
         named_tracer.setLevel(logging.NOTSET)
 
     def test_wraps_original_function(self):
-        proxy = _make_traceable_function(sample_function, named_tracer)
-
-        self.assertTrue(proxy.__wrapped__ is sample_function)
+        delegator = _make_traceable_function(sample_function, named_tracer)
+        self.assertTrue(delegator.__wrapped__ is sample_function)
 
     def test_uses_specified_logger(self):
-        proxy = _make_traceable_function(sample_function, named_tracer)
-
-        self.assertTrue(proxy._trace_log_delegator._logger is named_tracer)
+        delegator = _make_traceable_function(sample_function, named_tracer)
+        self.assertTrue(delegator._tracing_proxy.logger is named_tracer)
 
     def test_with_trace_enabled_emits_log_records(self):
         named_tracer.setLevel(TRACE)
-        proxy = _make_traceable_function(sample_function, named_tracer)
+        delegator = _make_traceable_function(sample_function, named_tracer)
         # IronPython gets func.__code__.co_freevars and func.__closure__ wrong
-        # ---------------------------------------------------------------------
+        # --------------------------------------------------------------------
         """
         print >> "\n\nfreevars and closure info:\n"
-        for (i, name) in enumerate(proxy.__code__.co_freevars):
-            print "%d:%s is" % (i, name), proxy.__closure__[i].cell_contents 
+        for (i, name) in enumerate(delegator.__code__.co_freevars):
+            print "%d:%s is" % (i, name), delegator.__closure__[i].cell_contents 
         """
-        proxy()
+        delegator()
 
         self.assertEqual(2, len(list_handler.records))
 
         call_record = list_handler.records[0]
-        self.assertEqual(proxy.__wrapped__.__name__, call_record.funcName)
+        self.assertEqual(delegator.__wrapped__.__name__, call_record.funcName)
         self.assertEqual("CALL *() **{}", call_record.getMessage())
         return_record = list_handler.records[1]
-        self.assertEqual(proxy.__wrapped__.__name__, return_record.funcName)
+        self.assertEqual(delegator.__wrapped__.__name__, return_record.funcName)
         self.assertEqual("RETURN None", return_record.getMessage())
 
     def test_with_trace_disabled_does_not_emit_records(self):
         named_tracer.setLevel(logging.DEBUG)
-        proxy = _make_traceable_function(sample_function, named_tracer)
-        proxy()
+        delegator = _make_traceable_function(sample_function, named_tracer)
+        delegator()
 
         self.assertEqual(0, len(list_handler.records))
 

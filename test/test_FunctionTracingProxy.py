@@ -24,16 +24,22 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 """Test case and runner for
-:func:`autologging._create_log_record_factories`.
+:func:`autologging._FunctionTracingProxy`.
 
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.info>"
 
+from inspect import isgenerator
 import logging
 import unittest
 
-from autologging import TRACE, _TracingLoggerDelegator, __version__
+from autologging import (
+    TRACE,
+    _FunctionTracingProxy,
+    _GeneratorIteratorTracingProxy,
+    __version__,
+)
 
 from test import has_co_lnotab, is_ironpython, list_handler
 
@@ -43,27 +49,38 @@ logging.getLogger().setLevel(logging.FATAL + 1)
 
 def sample_function(arg, keyword=None):
     x = arg.upper()
-    return "%s %s" % (arg, keyword)
+    return "%s %s" % (x, keyword)
 
 
 _expected_function_filename = sample_function.__code__.co_filename
-_expected_function_firstlineno = 44
+_expected_function_firstlineno = 50
 _expected_function_lastlineno = \
-        46 if has_co_lnotab else _expected_function_firstlineno
+        52 if has_co_lnotab else _expected_function_firstlineno
+
+
+def sample_generator(count):
+    for i in range(count):
+        yield i + 1
+
+
+_expected_generator_filename = sample_generator.__code__.co_filename
+_expected_generator_firstlineno = 61
+_expected_generator_lastlineno = \
+        63 if has_co_lnotab else _expected_generator_firstlineno
 
 
 class SampleClass(object):
     
     def method(self, arg, keyword=None):
         x = arg.upper()
-        return "%s %s" % (arg, keyword)
+        return "%s %s" % (x, keyword)
 
 
 _method = SampleClass.__dict__["method"]
 _expected_method_filename = _method.__code__.co_filename
-_expected_method_firstlineno = 57
+_expected_method_firstlineno = 74
 _expected_method_lastlineno = \
-        59 if has_co_lnotab else _expected_method_firstlineno
+        76 if has_co_lnotab else _expected_method_firstlineno
 
 _module_logger = logging.getLogger(__name__)
 _module_logger.setLevel(TRACE)
@@ -75,14 +92,16 @@ _class_logger.setLevel(TRACE)
 _class_logger.addHandler(list_handler)
 
 
-class TracingLoggerDelegatorTest(unittest.TestCase):
-    """Test the :class:`autologging._TracingLoggerDelegator` class."""
+class FunctionTracingProxyTest(unittest.TestCase):
+    """Test the :class:`autologging._FunctionTracingProxy` class."""
 
     @classmethod
     def setUpClass(cls):
-        cls._function_delegator = _TracingLoggerDelegator(
-            _module_logger, sample_function)
-        cls._method_delegator = _TracingLoggerDelegator(_class_logger, _method)
+        cls._function_proxy = _FunctionTracingProxy(
+                sample_function, _module_logger)
+        cls._generator_proxy = _FunctionTracingProxy(
+                sample_generator, _module_logger)
+        cls._method_proxy = _FunctionTracingProxy(_method, _class_logger)
 
     def setUp(self):
         list_handler.reset()
@@ -90,91 +109,57 @@ class TracingLoggerDelegatorTest(unittest.TestCase):
     def test_find_last_line_number_of_function(self):
         self.assertEqual(
             _expected_function_lastlineno,
-            _TracingLoggerDelegator._find_last_line_number(
+            _FunctionTracingProxy._find_last_line_number(
                 sample_function.__code__))
+
+    def test_find_last_line_number_of_generator(self):
+        self.assertEqual(
+            _expected_generator_lastlineno,
+            _FunctionTracingProxy._find_last_line_number(
+                sample_generator.__code__))
 
     def test_find_last_line_number_of_method(self):
         self.assertEqual(
             _expected_method_lastlineno,
-            _TracingLoggerDelegator._find_last_line_number(_method.__code__))
+            _FunctionTracingProxy._find_last_line_number(_method.__code__))
 
     def test_init_sets_expected_log_record_attributes_for_function(self):
         self.assertEqual(
             _expected_function_filename,
-            self._function_delegator._f_filename)
+            self._function_proxy._func_filename)
         self.assertEqual(
             _expected_function_firstlineno,
-            self._function_delegator._f_firstlineno)
+            self._function_proxy._func_firstlineno)
         self.assertEqual(
             _expected_function_lastlineno,
-            self._function_delegator._f_lastlineno)
+            self._function_proxy._func_lastlineno)
+
+    def test_init_sets_expected_log_record_attributes_for_generator(self):
         self.assertEqual(
-            "sample_function", self._function_delegator._f_name)
+            _expected_generator_filename,
+            self._generator_proxy._func_filename)
+        self.assertEqual(
+            _expected_generator_firstlineno,
+            self._generator_proxy._func_firstlineno)
+        self.assertEqual(
+            _expected_generator_lastlineno,
+            self._generator_proxy._func_lastlineno)
 
     def test_init_sets_expected_log_record_attributes_for_method(self):
         self.assertEqual(
-            _expected_method_filename, self._method_delegator._f_filename)
+            _expected_method_filename, self._method_proxy._func_filename)
         self.assertEqual(
             _expected_method_firstlineno,
-            self._method_delegator._f_firstlineno)
+            self._method_proxy._func_firstlineno)
         self.assertEqual(
-            _expected_method_lastlineno, self._method_delegator._f_lastlineno)
-        self.assertEqual("method", self._method_delegator._f_name)
-
-    def test_reports_expected_logger_name(self):
-        self.assertEqual(_module_logger.name, self._function_delegator.name)
-        self.assertEqual(_class_logger.name, self._method_delegator.name)
-
-    def test_delegator_name_is_readonly(self):
-        self.assertRaises(
-            AttributeError,
-            setattr, self._method_delegator, "name", "this.should.fail")
-
-    def test_reports_expected_logger_propagate(self):
-        self.assertFalse(self._method_delegator.propagate)
-        _class_logger.propagate = True
-        self.assertTrue(self._method_delegator.propagate)
-        # reset
-        _class_logger.propagate = False
-
-    def test_delegator_propagate_is_readonly(self):
-        self.assertRaises(
-            AttributeError,
-            setattr, self._method_delegator, "propagate", True)
-
-    def test_reports_expected_enabled_for_level(self):
-        self.assertTrue(self._method_delegator.isEnabledFor(TRACE))
-        _class_logger.setLevel(logging.FATAL)
-        self.assertFalse(self._method_delegator.isEnabledFor(logging.INFO))
-        # reset
-        _class_logger.setLevel(TRACE)
-
-    def test_reports_expected_effective_level(self):
-        self.assertEqual(TRACE, self._method_delegator.getEffectiveLevel())
-        _class_logger.setLevel(logging.NOTSET)
-        # should still report TRACE (module logger is the immediate parent)
-        self.assertEqual(TRACE, self._method_delegator.getEffectiveLevel())
-        # reset
-        _class_logger.setLevel(TRACE)
-
-    def test_reports_expected_handlers(self):
-        self.assertTrue(self._method_delegator.hasHandlers())
-        _class_logger.removeHandler(list_handler)
-        self.assertFalse(self._method_delegator.hasHandlers())
-        _class_logger.propagate = True
-        # NOW it should report True (will propagate to _module_logger, which
-        # has list_handler)
-        self.assertTrue(self._method_delegator.hasHandlers())
-        # reset
-        _class_logger.addHandler(list_handler)
-        _class_logger.propagate = False
+            _expected_method_lastlineno, self._method_proxy._func_lastlineno)
 
     def test_trace_function_call(self):
         f_args = ("spam",)
         f_keywords = dict(keyword="eggs")
-        self._function_delegator.trace_call(f_args, f_keywords)
+        self._function_proxy(sample_function, f_args, f_keywords)
 
-        self.assertEqual(1, len(list_handler.records))
+        self.assertEqual(2, len(list_handler.records))
 
         call_record = list_handler.records[0]
         self.assertEqual(_module_logger.name, call_record.name)
@@ -187,12 +172,15 @@ class TracingLoggerDelegatorTest(unittest.TestCase):
         self.assertEqual("sample_function", call_record.funcName)
 
     def test_trace_function_return(self):
+        f_args = ("spam",)
+        f_keywords = dict(keyword="eggs")
         f_return = "SPAM eggs"
-        self._function_delegator.trace_return(f_return)
+        rv = self._function_proxy(sample_function, f_args, f_keywords)
 
-        self.assertEqual(1, len(list_handler.records))
+        self.assertEqual(f_return, rv)
+        self.assertEqual(2, len(list_handler.records))
 
-        return_record = list_handler.records[0]
+        return_record = list_handler.records[1]
         self.assertEqual(_module_logger.name, return_record.name)
         self.assertEqual("RETURN %r", return_record.msg)
         self.assertEqual((f_return,), return_record.args)
@@ -202,13 +190,56 @@ class TracingLoggerDelegatorTest(unittest.TestCase):
         self.assertEqual(_expected_function_lastlineno, return_record.lineno)
         self.assertEqual("sample_function", return_record.funcName)
 
+    def test_trace_generator_call(self):
+        f_args = (3,)
+        f_keywords = {}
+        self._generator_proxy(sample_generator, f_args, f_keywords)
+
+        self.assertEqual(2, len(list_handler.records))
+
+        call_record = list_handler.records[0]
+        self.assertEqual(_module_logger.name, call_record.name)
+        self.assertEqual("CALL *%r **%r", call_record.msg)
+        self.assertEqual((f_args, {}), call_record.args)
+        self.assertEqual("TRACE", call_record.levelname)
+        self.assertEqual(TRACE, call_record.levelno)
+        self.assertEqual(_expected_generator_filename, call_record.pathname)
+        self.assertEqual(_expected_generator_firstlineno, call_record.lineno)
+        self.assertEqual("sample_generator", call_record.funcName)
+
+    def test_trace_generator_return(self):
+        f_args = (3,)
+        f_keywords = {}
+        rv = self._generator_proxy(sample_generator, f_args, f_keywords)
+
+        # unexpected closure behavior:
+        # the _GeneratorIteratorTracingProxy class object that is the result
+        # of type(rv) is NOT the same object as the one that is imported from
+        # the module!
+        #self.assertTrue(type(rv) is _GeneratorIteratorTracingProxy)
+        self.assertTrue(type(rv).__name__ == "_GeneratorIteratorTracingProxy")
+        self.assertEqual(2, len(list_handler.records))
+
+        return_record = list_handler.records[1]
+        self.assertEqual(_module_logger.name, return_record.name)
+        self.assertEqual("RETURN %r", return_record.msg)
+        self.assertEqual(1, len(return_record.args))
+        self.assertTrue(return_record.args[0] is rv.__wrapped__)
+        self.assertTrue(isgenerator(return_record.args[0]))
+        self.assertEqual("TRACE", return_record.levelname)
+        self.assertEqual(TRACE, return_record.levelno)
+        self.assertEqual(_expected_generator_filename, return_record.pathname)
+        self.assertEqual(_expected_generator_lastlineno, return_record.lineno)
+        self.assertEqual("sample_generator", return_record.funcName)
+
     def test_trace_method_call(self):
         f_args = ("spam",)
         f_keywords = dict(keyword="eggs")
-        self._method_delegator.trace_call(f_args, f_keywords)
+        obj = SampleClass()
+        method = _method.__get__(obj, SampleClass)
+        self._method_proxy(method, f_args, f_keywords)
 
-        self.assertEqual(
-            1, len(list_handler.records), repr(list_handler.records))
+        self.assertEqual(2, len(list_handler.records))
 
         call_record = list_handler.records[0]
         self.assertEqual(_class_logger.name, call_record.name)
@@ -221,13 +252,17 @@ class TracingLoggerDelegatorTest(unittest.TestCase):
         self.assertEqual("method", call_record.funcName)
 
     def test_trace_method_return(self):
+        f_args = ("spam",)
+        f_keywords = dict(keyword="eggs")
         f_return = "SPAM eggs"
-        self._method_delegator.trace_return(f_return)
+        obj = SampleClass()
+        method = _method.__get__(obj, SampleClass)
+        rv = self._method_proxy(method, f_args, f_keywords)
 
-        self.assertEqual(
-            1, len(list_handler.records), repr(list_handler.records))
+        self.assertEqual(f_return, rv)
+        self.assertEqual(2, len(list_handler.records))
 
-        return_record = list_handler.records[0]
+        return_record = list_handler.records[1]
         self.assertEqual(_class_logger.name, return_record.name)
         self.assertEqual("RETURN %r", return_record.msg)
         self.assertEqual((f_return,), return_record.args)
@@ -239,7 +274,7 @@ class TracingLoggerDelegatorTest(unittest.TestCase):
 
 
 def suite():
-    return unittest.makeSuite(TracingLoggerDelegatorTest)
+    return unittest.makeSuite(FunctionTracingProxyTest)
 
 
 if __name__ == "__main__":

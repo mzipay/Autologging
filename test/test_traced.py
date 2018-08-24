@@ -71,14 +71,14 @@ class TracedTest(unittest.TestCase):
 
         self.assertEqual(
             __name__ + ".SampleClass",
-            SampleClass.__dict__["__init__"]._trace_log_delegator.name)
+            SampleClass.__dict__["__init__"]._tracing_proxy.logger.name)
 
     def test_traced_class_uses_named_logger(self):
         traced(named_tracer)(SampleClass)
 
         self.assertEqual(
             named_tracer.name + ".SampleClass",
-            SampleClass.__dict__["__init__"]._trace_log_delegator.name)
+            SampleClass.__dict__["__init__"]._tracing_proxy.logger.name)
 
     def test_traced_replaces_function(self):
         traced_sample_function = traced(sample_function)
@@ -94,14 +94,14 @@ class TracedTest(unittest.TestCase):
         traced_sample_function = traced(sample_function)
 
         self.assertEqual(
-            __name__, traced_sample_function._trace_log_delegator.name)
+            __name__, traced_sample_function._tracing_proxy.logger.name)
 
     def test_traced_function_uses_named_logger(self):
         traced_sample_function = traced(named_tracer)(sample_function)
 
         self.assertEqual(
             named_tracer.name,
-            traced_sample_function._trace_log_delegator.name)
+            traced_sample_function._tracing_proxy.logger.name)
 
 
 def suite():

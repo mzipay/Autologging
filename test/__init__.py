@@ -113,7 +113,8 @@ def suite():
         test_make_traceable_instancemethod,
         test_make_traceable_classmethod,
         test_make_traceable_staticmethod,
-        test_TracingLoggerDelegator,
+        test_FunctionTracingProxy,
+        test_GeneratorIteratorTracingProxy,
         functest_logged,
         functest_traced,
         functest_traced_subclassing,
@@ -140,7 +141,8 @@ def suite():
     suite.addTest(test_make_traceable_instancemethod.suite())
     suite.addTest(test_make_traceable_classmethod.suite())
     suite.addTest(test_make_traceable_staticmethod.suite())
-    suite.addTest(test_TracingLoggerDelegator.suite())
+    suite.addTest(test_FunctionTracingProxy.suite())
+    suite.addTest(test_GeneratorIteratorTracingProxy.suite())
     suite.addTest(functest_logged.suite())
     suite.addTest(functest_traced.suite())
     suite.addTest(functest_traced_subclassing.suite())

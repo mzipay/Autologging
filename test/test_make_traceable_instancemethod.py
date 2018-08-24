@@ -33,12 +33,7 @@ __author__ = "Matthew Zipay <mattz@ninthtest.info>"
 import logging
 import unittest
 
-from autologging import (
-    _generate_logger_name,
-    _make_traceable_instancemethod,
-    TRACE,
-    __version__,
-)
+from autologging import _make_traceable_instancemethod, TRACE, __version__
 
 from test import list_handler, named_tracer
 
@@ -52,6 +47,7 @@ class SampleClass(object):
         pass
 
 
+# functions have a __get__ method; they can act as descriptors
 _original_method_descriptor = SampleClass.__dict__["method"]
 
 
@@ -69,46 +65,46 @@ class MakeTraceableInstancemethodTest(unittest.TestCase):
         if hasattr(SampleClass.__dict__["method"], "__autologging_traced__"):
             setattr(SampleClass, "method", _original_method_descriptor)
 
-    def test_creates_proxy_descriptor(self):
-        proxy = _make_traceable_instancemethod(
+    def test_creates_delegator_descriptor(self):
+        delegator = _make_traceable_instancemethod(
             SampleClass.__dict__["method"], named_tracer)
 
-        self.assertTrue(hasattr(proxy, "__autologging_traced__"))
+        self.assertTrue(hasattr(delegator, "__autologging_traced__"))
 
     def test_wraps_original_unbound_function(self):
-        proxy = _make_traceable_instancemethod(
+        delegator = _make_traceable_instancemethod(
             SampleClass.__dict__["method"], named_tracer)
 
-        self.assertTrue(proxy.__wrapped__ is _original_method_descriptor)
+        self.assertTrue(delegator.__wrapped__ is _original_method_descriptor)
 
     def test_uses_specified_logger(self):
-        proxy = _make_traceable_instancemethod(
+        delegator = _make_traceable_instancemethod(
             SampleClass.__dict__["method"], named_tracer)
 
-        self.assertTrue(
-            proxy._trace_log_delegator._logger is named_tracer)
+        self.assertTrue(delegator._tracing_proxy.logger is named_tracer)
 
     def test_with_trace_enabled_emits_log_records(self):
         named_tracer.setLevel(TRACE)
-        proxy = _make_traceable_instancemethod(
+        delegator = _make_traceable_instancemethod(
             SampleClass.__dict__["method"], named_tracer)
-        setattr(SampleClass, "method", proxy)
+        setattr(SampleClass, "method", delegator)
         SampleClass().method()
 
         self.assertEqual(2, len(list_handler.records))
 
         call_record = list_handler.records[0]
-        self.assertEqual(proxy.__wrapped__.__name__, call_record.funcName)
+        self.assertEqual(delegator.__wrapped__.__name__, call_record.funcName)
         self.assertEqual("CALL *() **{}", call_record.getMessage())
         return_record = list_handler.records[1]
-        self.assertEqual(proxy.__wrapped__.__name__, return_record.funcName)
+        self.assertEqual(
+                delegator.__wrapped__.__name__, return_record.funcName)
         self.assertEqual("RETURN None", return_record.getMessage())
 
     def test_with_trace_disabled_does_not_emit_log_records(self):
         named_tracer.setLevel(logging.DEBUG)
-        proxy = _make_traceable_instancemethod(
+        delegator = _make_traceable_instancemethod(
             SampleClass.__dict__["method"], named_tracer)
-        setattr(SampleClass, "method", proxy)
+        setattr(SampleClass, "method", delegator)
         SampleClass().method()
 
         self.assertEqual(0, len(list_handler.records))
