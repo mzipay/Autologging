@@ -30,9 +30,27 @@ from functools import wraps
 from inspect import isclass, isgenerator, ismethod, isroutine
 import logging
 import os
+import platform
 import sys
 from types import FunctionType
 import warnings
+
+# BEGIN IronPython detection
+# (this needs to be implemented consistently w/r/t Aglyph's aglyph._compat)
+try:
+    _py_impl = platform.python_implementation()
+except:
+    _py_impl = "Python"
+
+try:
+    import clr
+    clr.AddReference("System")
+    _has_clr = True
+except:
+    _has_clr = False
+
+_is_ironpython = _py_impl == "IronPython" and _has_clr
+# END IronPython detection
 
 __all__ = [
     "TRACE",
@@ -994,40 +1012,40 @@ def _make_traceable_staticmethod(method_descriptor, logger):
     return staticmethod(autologging_traced_staticmethod_delegator)
 
 
+def _find_lastlineno(f_code):
+    """Return the last line number of a function.
+
+    :arg types.CodeType f_code:
+       the bytecode object for a function, as obtained from
+       ``function.__code__``
+    :return: the last physical line number of the function
+    :rtype: int
+
+    """
+    last_line_number = f_code.co_firstlineno
+
+    # Jython and IronPython do not have co_lnotab
+    if hasattr(f_code, "co_lnotab"):
+        # co_lnotab is a sequence of 2-byte offsets
+        # (address offset, line number offset), each relative to the
+        # previous; we only care about the line number offsets here, so
+        # start at index 1 and increment by 2
+        i = 1
+        while i < len(f_code.co_lnotab):
+            # co_lnotab is bytes in Python 3, but str in Python 2
+            last_line_number += (
+                f_code.co_lnotab[i] if sys.version_info[0] >= 3
+                else ord(f_code.co_lnotab[i]))
+            i += 2
+
+    return last_line_number
+
+
 class _FunctionTracingProxy(object):
     """Proxy a function invocation to capture and log the call arguments
     and return value.
 
     """
-
-    @staticmethod
-    def _find_last_line_number(f_code):
-        """Return the last line number of a function.
-
-        :arg types.CodeType f_code:
-           the bytecode object for a function, as obtained from
-           ``function.__code__``
-        :return: the last physical line number of the function
-        :rtype: int
-
-        """
-        last_line_number = f_code.co_firstlineno
-
-        # Jython and IronPython do not have co_lnotab
-        if hasattr(f_code, "co_lnotab"):
-            # co_lnotab is a sequence of 2-byte offsets
-            # (address offset, line number offset), each relative to the
-            # previous; we only care about the line number offsets here, so
-            # start at index 1 and increment by 2
-            i = 1
-            while i < len(f_code.co_lnotab):
-                # co_lnotab is bytes in Python 3, but str in Python 2
-                last_line_number += (
-                    f_code.co_lnotab[i] if sys.version_info[0] >= 3
-                    else ord(f_code.co_lnotab[i]))
-                i += 2
-
-        return last_line_number
 
     def __init__(self, function, logger):
         """
@@ -1038,7 +1056,7 @@ class _FunctionTracingProxy(object):
         func_code = function.__code__
         self._func_filename = func_code.co_filename
         self._func_firstlineno = func_code.co_firstlineno
-        self._func_lastlineno = self._find_last_line_number(func_code)
+        self._func_lastlineno = _find_lastlineno(func_code)
 
         self._logger = logger
 
@@ -1093,7 +1111,8 @@ class _FunctionTracingProxy(object):
                 None,                  # exc_info
                 func=function.__name__))
 
-            return (_GeneratorIteratorTracingProxy(value, self._logger)
+            return (_GeneratorIteratorTracingProxy(
+                        function, value, self._logger)
                     if isgenerator(value) else value)
 
 
@@ -1106,12 +1125,16 @@ class _GeneratorIteratorTracingProxy(object):
     #: An easily-queriable marker.
     __autologging_traced__ = True
 
-    def __init__(self, generator_iterator, logger):
+    def __init__(self, generator, generator_iterator, logger):
         """
+        :arg generator:
+           the generator function that produced *generator_iterator*
         :arg types.GeneratorType generator_iterator:
            a generator iterator returned by a traced function
         :arg logging.Logger logger: the tracing logger
         """
+        self._fallback_lineno = \
+                _find_lastlineno(generator.__code__) # see _gi_lineno
         self._gi = generator_iterator
         self._logger = logger
 
@@ -1120,6 +1143,31 @@ class _GeneratorIteratorTracingProxy(object):
         """The original generator iterator."""
         return self._gi
 
+    @property
+    def _gi_lineno(self):
+        # the fallback line number is somewhat of a hack for IronPython,
+        # which does not track gi.gi_frame.f_lineno correctly:
+        #---------------------------------------------------------------
+        # >>> def g():
+        # ...   for c in "spam":
+        # ...     yield c
+        # ...
+        # >>> gi = g()
+        # >>> gi.gi_frame.f_lineno
+        # 1
+        # >>> next(gi)
+        # 's'
+        # >>> gi.gi_frame.f_lineno
+        # 1                         <-- should be 3
+        #---------------------------------------------------------------
+        # By using the fallback line number
+        # (i.e. _find_lastlineno(generator.__code__)), at least the line
+        # number reported in the tracing log records will point to the
+        # generator function.
+        return (
+                self._gi.gi_frame.f_lineno if not _is_ironpython
+                else self._fallback_lineno)
+
     # NOTE: implement __iter__ instead of next/__next__ for simpler
     # Python 2/3 compatibility
     def __iter__(self):
@@ -1127,30 +1175,32 @@ class _GeneratorIteratorTracingProxy(object):
         for the wrapped generator iterator.
 
         """
-        lineno = self._gi.gi_frame.f_lineno
+        # get this now in case the generator iterator is empty
+        # (gi.gi_frame is None when the generator iterator is finished!)
+        gi_lineno = self._gi_lineno
 
         for next_value in self._gi:
-            lineno = self._gi.gi_frame.f_lineno
+            gi_lineno = self._gi_lineno
             self._logger.handle(logging.LogRecord(
-                self._logger.name,    # name
-                TRACE,                # level
-                self._gi.gi_code.co_filename,     # pathname
-                lineno, # lineno
-                "YIELD %r",           # msg
-                (next_value,),     # args
-                None,                 # exc_info
+                self._logger.name,              # name
+                TRACE,                          # level
+                self._gi.gi_code.co_filename,   # pathname
+                gi_lineno,                      # lineno
+                "YIELD %r",                     # msg
+                (next_value,),                  # args
+                None,                           # exc_info
                 func=self._gi.__name__
             ))
             yield next_value
 
         self._logger.handle(logging.LogRecord(
-            self._logger.name,  # name
-            TRACE,              # level
+            self._logger.name,              # name
+            TRACE,                          # level
             self._gi.gi_code.co_filename,   # pathname
-            lineno, # lineno
-            "STOP",             # msg
-            tuple(),            # args
-            None,               # exc_info
+            gi_lineno,                      # lineno
+            "STOP",                         # msg
+            tuple(),                        # args
+            None,                           # exc_info
             func=self._gi.__name__
         ))
 
