@@ -41,46 +41,52 @@ from autologging import (
     __version__,
 )
 
-from test import has_co_lnotab, is_ironpython, list_handler
+from test import get_lineno, has_co_lnotab, list_handler
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)
 
 
-def sample_function(arg, keyword=None):
+def sample_function(arg, keyword=None): #s_f:L1
     x = arg.upper()
-    return "%s %s" % (x, keyword)
+    return "%s %s" % (x, keyword) #s_f:LN
 
 
 _expected_function_filename = sample_function.__code__.co_filename
-_expected_function_firstlineno = 50
-_expected_function_lastlineno = \
-        52 if has_co_lnotab else _expected_function_firstlineno
+_expected_function_firstlineno = get_lineno(
+        _expected_function_filename, "#s_f:L1")
+_expected_function_lastlineno = (get_lineno(
+        _expected_function_filename, "#s_f:LN")
+        if has_co_lnotab else _expected_function_firstlineno)
 
 
-def sample_generator(count):
+def sample_generator(count): #s_g:L1
     for i in range(count):
-        yield i + 1
+        yield i + 1 #s_g:LY
 
 
 _expected_generator_filename = sample_generator.__code__.co_filename
-_expected_generator_firstlineno = 61
-_expected_generator_lastlineno = \
-        63 if has_co_lnotab else _expected_generator_firstlineno
+_expected_generator_firstlineno = get_lineno(
+        _expected_generator_filename, "#s_g:L1")
+_expected_generator_lastlineno = (get_lineno(
+        _expected_generator_filename, "#s_g:LY")
+        if has_co_lnotab else _expected_generator_firstlineno)
 
 
 class SampleClass(object):
     
-    def method(self, arg, keyword=None):
+    def method(self, arg, keyword=None): #SC.m:L1
         x = arg.upper()
-        return "%s %s" % (x, keyword)
+        return "%s %s" % (x, keyword) #SC.m:LN
 
 
 _method = SampleClass.__dict__["method"]
 _expected_method_filename = _method.__code__.co_filename
-_expected_method_firstlineno = 74
-_expected_method_lastlineno = \
-        76 if has_co_lnotab else _expected_method_firstlineno
+_expected_method_firstlineno = get_lineno(
+        _expected_method_filename, "#SC.m:L1")
+_expected_method_lastlineno = (get_lineno(
+        _expected_method_filename, "#SC.m:LN")
+        if has_co_lnotab else _expected_method_firstlineno)
 
 _module_logger = logging.getLogger(__name__)
 _module_logger.setLevel(TRACE)
@@ -105,23 +111,6 @@ class FunctionTracingProxyTest(unittest.TestCase):
 
     def setUp(self):
         list_handler.reset()
-
-    def test_find_last_line_number_of_function(self):
-        self.assertEqual(
-            _expected_function_lastlineno,
-            _FunctionTracingProxy._find_last_line_number(
-                sample_function.__code__))
-
-    def test_find_last_line_number_of_generator(self):
-        self.assertEqual(
-            _expected_generator_lastlineno,
-            _FunctionTracingProxy._find_last_line_number(
-                sample_generator.__code__))
-
-    def test_find_last_line_number_of_method(self):
-        self.assertEqual(
-            _expected_method_lastlineno,
-            _FunctionTracingProxy._find_last_line_number(_method.__code__))
 
     def test_init_sets_expected_log_record_attributes_for_function(self):
         self.assertEqual(

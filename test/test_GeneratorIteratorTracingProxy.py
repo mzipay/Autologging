@@ -35,40 +35,47 @@ import logging
 import unittest
 
 from autologging import (
+    _is_ironpython,
     TRACE,
     _GeneratorIteratorTracingProxy,
     __version__,
 )
 
-from test import has_co_lnotab, is_ironpython, list_handler
+from test import get_lineno, has_co_lnotab, list_handler
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)
 
 
-def sample_generator(count):
+def sample_generator(count): #s_g:L1
     for i in range(count):
-        yield i + 1
+        yield i + 1 #s_g:LY
 
 
 _expected_function_filename = sample_generator.__code__.co_filename
 # generator iterators have a built-in reference to a frame object, so the
-# line number *should* be consistent
-_expected_function_lineno = 51
+# line number *should* be consistent... except for IronPython
+_expected_function_lineno = (
+        get_lineno(_expected_function_filename, "#s_g:LY")
+        if not _is_ironpython else
+        get_lineno(_expected_function_filename, "#s_g:L1"))
 
 
 class SampleClass(object):
     
-    def method(self, count):
+    def method(self, count): #SC.m:L1
         for i in range(count):
-            yield i + 1
+            yield i + 1 #SC.m:LY
 
 
 _method = SampleClass.__dict__["method"]
 _expected_method_filename = _method.__code__.co_filename
 # generator iterators have a built-in reference to a frame object, so the
-# line number *should* be consistent
-_expected_method_lineno = 64
+# line number *should* be consistent... except for IronPython
+_expected_method_lineno = (
+        get_lineno(_expected_function_filename, "#SC.m:LY")
+        if not _is_ironpython else
+        get_lineno(_expected_function_filename, "#SC.m:L1"))
 
 _module_logger = logging.getLogger(__name__)
 _module_logger.setLevel(TRACE)
@@ -90,9 +97,10 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
     def setUpClass(cls):
         # note: generator iterators cannot be "rewound"
         cls._function_proxy = _GeneratorIteratorTracingProxy(
-                sample_generator(2), _module_logger)
+                sample_generator, sample_generator(2), _module_logger)
         cls._method_proxy = _GeneratorIteratorTracingProxy(
-                SampleClass().method(2), _class_logger)
+                SampleClass.__dict__["method"], SampleClass().method(2),
+                _class_logger)
 
     def setUp(self):
         list_handler.reset()

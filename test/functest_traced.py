@@ -33,13 +33,12 @@ __author__ = "Matthew Zipay <mattz@ninthtest.info>"
 import logging
 import unittest
 
-from autologging import TRACE, __version__
+from autologging import TRACE, __version__, _is_ironpython
 
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
     has_co_lnotab,
-    is_ironpython,
     list_handler,
     named_tracer,
 )
@@ -83,7 +82,7 @@ class _TracedFunctionalTest(unittest.TestCase):
         self.assertEqual(TRACE, trace_record.levelno)
         # IronPython doesn't handle frames or code objects fully (even with
         # -X:FullFrames)
-        if not is_ironpython:
+        if not _is_ironpython:
             self.assertEqual(
                 traced_function.__code__.co_filename, trace_record.pathname)
             self.assertEqual(expected_lineno, trace_record.lineno)

@@ -34,18 +34,11 @@ import unittest
 
 from autologging import TRACE, __version__
 
-try:
-    import clr
-    clr.AddReference("System")
-    is_ironpython = True
-except:
-    is_ironpython = False
-
 __all__ = [
     "dummy_module_logger",
+    "get_lineno",
     "get_dummy_lineno",
     "has_co_lnotab",
-    "is_ironpython",
     "list_handler",
     "named_logger",
     "named_tracer",
@@ -53,13 +46,18 @@ __all__ = [
 ]
 
 
-def get_dummy_lineno(marker):
+def get_lineno(filename, marker):
     fn = os.path.join(
-        os.path.dirname(get_dummy_lineno.__code__.co_filename), "dummy.py")
+        os.path.dirname(get_lineno.__code__.co_filename),
+        os.path.basename(filename))
     with open(fn) as fp:
         for (i, line) in enumerate(fp):
             if marker in line:
                 return i + 1
+
+
+def get_dummy_lineno(marker):
+    return get_lineno("dummy.py", marker)
 
 
 has_co_lnotab = hasattr(get_dummy_lineno.__code__, "co_lnotab")
@@ -113,6 +111,7 @@ def suite():
         test_make_traceable_instancemethod,
         test_make_traceable_classmethod,
         test_make_traceable_staticmethod,
+        test_find_lastlineno,
         test_FunctionTracingProxy,
         test_GeneratorIteratorTracingProxy,
         functest_logged,
@@ -141,6 +140,7 @@ def suite():
     suite.addTest(test_make_traceable_instancemethod.suite())
     suite.addTest(test_make_traceable_classmethod.suite())
     suite.addTest(test_make_traceable_staticmethod.suite())
+    suite.addTest(test_find_lastlineno.suite())
     suite.addTest(test_FunctionTracingProxy.suite())
     suite.addTest(test_GeneratorIteratorTracingProxy.suite())
     suite.addTest(functest_logged.suite())
