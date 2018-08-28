@@ -118,6 +118,7 @@ Table of Contents
    autologging
    examples
    internals
+   testing
 
 Download and Install
 --------------------

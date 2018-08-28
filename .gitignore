@@ -4,6 +4,8 @@
 *.bak
 *.swp
 *.class
+*.sh
+*.bat
 __pycache__/
 Autologging.egg-info/
 MANIFEST
