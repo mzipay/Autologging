@@ -41,7 +41,7 @@ example:
 
 >>> from autologging import traced
 >>> @traced
->>> def example():
+... def example():
 ...     return "OK"
 ... 
 >>> hasattr(example, "__autologging_traced__")
@@ -71,6 +71,7 @@ reference to the original function is stored as the ``__wrapped__``
 attribute of the replacement function.
 
 >>> from autologging import traced
+>>> @traced
 ... def example():
         return "OK"
 ... 
@@ -78,7 +79,8 @@ attribute of the replacement function.
 True
 
 >>> from autologging import traced
->>> class Example:
+>>> @traced
+... class Example:
 ...     def method(self):
 ...         return "OK"
 ... 
@@ -94,7 +96,8 @@ use the ``__wrapped__`` attribute *of the __func__ attribute* of the
 replacement classmethod or staticmethod. An example makes this clear:
 
 >>> from autologging import traced
->>> class Example:
+>>> @traced
+... class Example:
 ...     @classmethod
 ...     def class_method(cls):
 ...         return "OK"
