@@ -143,7 +143,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
     def test_nested_method_log_and_trace_records(self):
         LoggedAndTracedClass.NestedClass()
 
-        self.assertEqual(2, len(list_handler.records))
+        self.assertEqual(3, len(list_handler.records))
 
         wrapped_function = \
             LoggedAndTracedClass.NestedClass.__dict__["__init__"].__wrapped__
@@ -157,11 +157,14 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         self._assert_log_record(
             list_handler.records[1], wrapped_function, expected_logger_name,
             "LATC.NC.__i__")
+        self._assert_return_record(
+            list_handler.records[2], wrapped_function, expected_tracer_name,
+            (None,), "LATC.NC.__i__")
 
     def test_nested_nonpublic_method_log_and_trace_records(self):
         LoggedAndTracedClass._NonPublicNestedClass()
 
-        self.assertEqual(2, len(list_handler.records))
+        self.assertEqual(3, len(list_handler.records))
 
         wrapped_function = LoggedAndTracedClass._NonPublicNestedClass.__dict__[
             "__init__"].__wrapped__
@@ -176,6 +179,9 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         self._assert_log_record(
             list_handler.records[1], wrapped_function, expected_logger_name,
             "LATC._NPNC.__i__")
+        self._assert_return_record(
+            list_handler.records[2], wrapped_function, expected_tracer_name,
+            (None,), "LATC._NPNC.__i__")
 
     def test_nested_internal_log_record_in_untraced_method(self):
         LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass()

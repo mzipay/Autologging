@@ -1100,20 +1100,18 @@ class _FunctionTracingProxy(object):
 
         value = function(*args, **keywords)
 
-        if function.__name__ != "__init__":
-            self._logger.handle(logging.LogRecord(
-                self._logger.name,     # name
-                TRACE,                 # level
-                self._func_filename,   # pathname
-                self._func_lastlineno, # lineno
-                "RETURN %r",           # msg
-                (value,),              # args
-                None,                  # exc_info
-                func=function.__name__))
+        self._logger.handle(logging.LogRecord(
+            self._logger.name,     # name
+            TRACE,                 # level
+            self._func_filename,   # pathname
+            self._func_lastlineno, # lineno
+            "RETURN %r",           # msg
+            (value,),              # args
+            None,                  # exc_info
+            func=function.__name__))
 
-            return (_GeneratorIteratorTracingProxy(
-                        function, value, self._logger)
-                    if isgenerator(value) else value)
+        return (_GeneratorIteratorTracingProxy(function, value, self._logger)
+                if isgenerator(value) else value)
 
 
 class _GeneratorIteratorTracingProxy(object):

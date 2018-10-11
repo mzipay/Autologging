@@ -129,12 +129,15 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
         obj = TracedClass()
 
         self.assertEqual("TC.%s %s and %s", obj.format_string)
-        self.assertEqual(1, len(list_handler.records))
+        self.assertEqual(2, len(list_handler.records))
 
         traced_function = TracedClass.__dict__["__init__"].__wrapped__
         self._assert_call_record(
             list_handler.records[0], traced_function, "test.dummy.TracedClass",
             (tuple(), dict()), "TC.__i__")
+        self._assert_return_record(
+            list_handler.records[1], traced_function, "test.dummy.TracedClass",
+            (None,), "TC.__i__")
 
     def test_call_method_tracing_log_records(self):
         obj = TracedClass()
@@ -171,7 +174,7 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
         obj = TracedClass.NestedClass()
 
         self.assertEqual("TC.NC.%s %s and %s", obj.format_string)
-        self.assertEqual(1, len(list_handler.records))
+        self.assertEqual(2, len(list_handler.records))
 
         traced_function = \
             TracedClass.NestedClass.__dict__["__init__"].__wrapped__
@@ -180,6 +183,9 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
         self._assert_call_record(
             list_handler.records[0], traced_function, expected_logger_name,
             (tuple(), dict()), "TC.NC.__i__")
+        self._assert_return_record(
+            list_handler.records[1], traced_function, expected_logger_name,
+            (None,), "TC.NC.__i__")
 
     def test_nested_internal_instance_method_tracing_log_records(self):
         value = TracedClass._TracedClass__InternalNestedClass().method(None)

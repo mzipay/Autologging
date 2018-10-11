@@ -100,8 +100,9 @@ Logging and tracing output::
    $ python example.py
    TRACE:example.py,10:__main__.Example.__init__:CALL *() **{}
    INFO:example.py,11:__main__.Example.__init__:initialized
+   TRACE:example.py,11:__main__.Example.__init__:RETURN None
    TRACE:example.py,13:__main__.Example.backwards:CALL *('spam', 'eggs') **{}
-   TRACE:example.py,15:__main__.Example.backwards:RETURN <generator object backwards at 0x7fa534d61eb0>
+   TRACE:example.py,15:__main__.Example.backwards:RETURN <generator object Example.backwards at 0x7f298a450de0>
    TRACE:example.py,15:__main__.Example.backwards:YIELD 'maps'
    maps
    TRACE:example.py,15:__main__.Example.backwards:YIELD 'sgge'
