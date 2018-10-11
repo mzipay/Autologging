@@ -1,5 +1,5 @@
 =================================
-Autologging 1.2.0 testing summary
+Autologging 1.2.1 testing summary
 =================================
 
 .. _CPython: https://www.python.org/

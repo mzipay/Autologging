@@ -24,7 +24,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.info>"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 from functools import wraps
 from inspect import isclass, isgenerator, ismethod, isroutine
