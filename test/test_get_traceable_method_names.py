@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -120,6 +120,47 @@ class GetTraceableMethodNamesTest(unittest.TestCase):
             self.assertEqual(1, len(w))
             self.assertEqual(
                 "'inherited' does not identify a method defined in SampleClass",
+                str(w[0].message))
+
+    def test_can_exclude_instead_of_include_named_methods(self):
+        actual_method_names = _get_traceable_method_names(
+            [
+                "overridden",
+                "_nonpublic",
+            ],
+            SampleClass,
+            exclude=True)
+
+        self.assertEqual(
+            sorted([
+                "class_method",
+                "static_method",
+                "__init__",
+                "public",
+                "_SampleClass__internal",
+            ]),
+            sorted(actual_method_names))
+
+    def test_issues_warning_when_exclude_resolves_to_empty_list(self):
+        with warnings.catch_warnings(record = True) as w:
+            warnings.simplefilter("always")
+            actual_method_names = _get_traceable_method_names(
+                [
+                    "class_method",
+                    "static_method",
+                    "__init__",
+                    "public",
+                    "overridden",
+                    "_nonpublic",
+                    "__internal",
+                ],
+                SampleClass,
+                exclude=True)
+            self.assertEqual([], actual_method_names)
+            self.assertEqual(1, len(w))
+            self.assertEqual(
+                "exclude=True with the supplied method names results in NO "
+                    "traceable methods for SampleClass",
                 str(w[0].message))
 
 

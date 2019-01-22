@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -46,8 +46,12 @@ class SampleClass(object):
     def __init__(self):
         pass
 
+    def method(self):
+        pass
 
-_original_method_descriptor = SampleClass.__dict__["__init__"]
+
+_orig_init_method_descriptor = SampleClass.__dict__["__init__"]
+_orig_method_method_descriptor = SampleClass.__dict__["method"]
 
 
 def sample_function():
@@ -58,7 +62,8 @@ class TracedTest(unittest.TestCase):
     """Test the :func:`autologging.traced` decorator function."""
 
     def tearDown(self):
-        setattr(SampleClass, "__init__", _original_method_descriptor)
+        setattr(SampleClass, "__init__", _orig_init_method_descriptor)
+        setattr(SampleClass, "method", _orig_method_method_descriptor)
 
     def test_traced_with_empty_args_is_equivalent_to_traced(self):
         self.assertTrue(traced() is traced)
@@ -79,6 +84,21 @@ class TracedTest(unittest.TestCase):
         self.assertEqual(
             named_tracer.name + ".SampleClass",
             SampleClass.__dict__["__init__"]._tracing_proxy.logger.name)
+
+    def test_traced_includes_only_named_methods(self):
+        traced("method")(SampleClass)
+
+        self.assertTrue(SampleClass.__dict__["__init__"] is
+                _orig_init_method_descriptor)
+        self.assertTrue(SampleClass.__dict__["method"].__autologging_traced__)
+
+    def test_traced_excludes_only_named_methods(self):
+        traced("method", exclude=True)(SampleClass)
+
+        self.assertTrue(
+                SampleClass.__dict__["__init__"].__autologging_traced__)
+        self.assertTrue(SampleClass.__dict__["method"] is
+                _orig_method_method_descriptor)
 
     def test_traced_replaces_function(self):
         traced_sample_function = traced(sample_function)

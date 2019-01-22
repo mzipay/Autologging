@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -158,6 +158,38 @@ class InstallTraceableMethodsTest(unittest.TestCase):
             self.assertTrue(
                 hasattr(descriptor, "__autologging_traced__"),
                 traced_method_name)
+
+    def test_excludes_named_methods_only(self):
+        _install_traceable_methods(SampleClass, "public", exclude=True)
+
+        for traced_method_name in [
+                "class_method",
+                "static_method"]:
+            descriptor = SampleClass.__dict__[traced_method_name]
+            self.assertTrue(
+                hasattr(descriptor.__func__, "__autologging_traced__"),
+                traced_method_name)
+
+        for traced_method_name in [
+                "__init__",
+                "_nonpublic",
+                "_SampleClass__internal"]:
+            descriptor = SampleClass.__dict__[traced_method_name]
+            self.assertTrue(
+                hasattr(descriptor, "__autologging_traced__"),
+                traced_method_name)
+
+        # explicitly excluded
+        self.assertFalse(
+            hasattr(
+                SampleClass.__dict__["public"], "__autologging_traced__"),
+            "public")
+
+        # excluded by default
+        self.assertFalse(
+            hasattr(
+                SampleClass.__dict__["__special__"], "__autologging_traced__"),
+            "__special__")
 
     def test_traces_with_default_logger(self):
         _install_traceable_methods(SampleClass)
