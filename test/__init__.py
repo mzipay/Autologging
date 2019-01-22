@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -107,6 +107,7 @@ def suite():
         test_get_default_traceable_method_names,
         test_is_internal_name,
         test_mangle_name,
+        test_unmangle_name,
         test_is_special_name,
         test_make_traceable_instancemethod,
         test_make_traceable_classmethod,
@@ -136,6 +137,7 @@ def suite():
     suite.addTest(test_get_default_traceable_method_names.suite())
     suite.addTest(test_is_internal_name.suite())
     suite.addTest(test_mangle_name.suite())
+    suite.addTest(test_unmangle_name.suite())
     suite.addTest(test_is_special_name.suite())
     suite.addTest(test_make_traceable_instancemethod.suite())
     suite.addTest(test_make_traceable_classmethod.suite())

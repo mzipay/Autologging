@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -24,7 +24,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.info>"
-__version__ = "1.2.1"
+__version__ = "1.3.0b0"
 
 from functools import wraps
 from inspect import isclass, isgenerator, ismethod, isroutine
@@ -222,7 +222,7 @@ def logged(obj):
         return _add_logger_to(obj)
 
 
-def traced(*args):
+def traced(*args, **keywords):
     """Add call and return tracing to an unbound function or to the
     methods of a class.
 
@@ -432,7 +432,7 @@ def traced(*args):
 
     .. note::
        When the runtime Python version is >= 3.3, the *qualified* class
-       name will be used to name the tracig logger (i.e. a nested class
+       name will be used to name the tracing logger (i.e. a nested class
        will write tracing log entries to a logger named
        "module.Parent.Nested").
 
@@ -495,10 +495,72 @@ def traced(*args):
        1. Use ``traced`` to decorate the super class.
        2. Override the method and trace it in the subclass.
 
+    .. rubric:: Exclude specified methods from tracing
+
+    .. versionadded:: 1.3.0b0
+
+    :arg tuple method_names:
+       the names of the methods that will be excluded from tracing
+    :keyword bool exclude:
+       ``True`` to cause the method names list to be interpreted as
+       an exclusion list (``False`` is the default, and causes the named
+       methods to be **included** as described above)
+
+    The example below demonstrates exclusions using the default logger.
+
+    >>> import sys
+    >>> logging.basicConfig(
+    ...     level=TRACE, stream=sys.stdout,
+    ...     format="%(levelname)s:%(name)s:%(funcName)s:%(message)s")
+    >>> @traced("_nonpublic", "__internal", exclude=True)
+    ... class Class:
+    ...     def __init__(self, x):
+    ...         self._x = x
+    ...     def public(self, y):
+    ...         return self._x + y
+    ...     def _nonpublic(self, y):
+    ...         return self._x - y
+    ...     def __internal(self, y=2):
+    ...         return self._x ** y
+    ...     def __repr__(self):
+    ...         return "Class(%r)" % self._x
+    ...     def __call__(self):
+    ...         return self._x
+    ...
+    >>> obj = Class(7)
+    >>> obj.public(9)
+    TRACE:autologging.Class:public:CALL *(9,) **{}
+    TRACE:autologging.Class:public:RETURN 16
+    16
+    >>> obj._nonpublic(5)
+    2
+    >>> obj._Class__internal(y=3)
+    343
+    >>> repr(obj)
+    'Class(7)'
+    >>> obj()
+    TRACE:autologging.Class:__call__:CALL *() **{}
+    TRACE:autologging.Class:__call__:RETURN 7
+    7
+
+    When method names are excluded via *args* and the *exclude* keyword,
+    Autologging **ignores** methods that are not actually defined in the
+    body of the class being traced.
+
+    .. warning::
+       If an exclusion list causes the list of traceable methods to
+       resolve empty, then Autologging will issue a :exc:`UserWarning`.
+
+    .. note::
+       When the runtime Python version is >= 3.3, the *qualified* class
+       name will be used to name the tracing logger (i.e. a nested class
+       will write tracing log entries to a logger named
+       "module.Parent.Nested").
+
     .. note::
        When tracing a class, if the default (class-named) logger is
        used **and** the runtime Python version is >= 3.3, then the
-       *qualified* class name will be used to name the tracig logger
+       *qualified* class name will be used to name the tracing logger
        (i.e. a nested class will write tracing log entries to a logger
        named "module.Parent.Nested").
 
@@ -541,19 +603,21 @@ def traced(*args):
         return traced
 
     if isclass(obj): # `@traced' class
-        return _install_traceable_methods(obj)
+        return _install_traceable_methods(obj,
+                exclude=keywords.get("exclude", False))
     elif isroutine(obj): # `@traced' function
         return _make_traceable_function(
             obj, logging.getLogger(_generate_logger_name(obj)))
     elif isinstance(obj, logging.Logger):
         # may be decorating a class OR a function
         method_names = args[1:]
+        exclude = keywords.get("exclude", False)
 
         def traced_decorator(class_or_fn):
             if isclass(class_or_fn):
                 # `@traced(logger)' or `@traced(logger, "method_name1", ..)' class
                 return _install_traceable_methods(
-                    class_or_fn, *method_names,
+                    class_or_fn, *method_names, exclude=exclude,
                     logger=logging.getLogger(
                         _generate_logger_name(
                             class_or_fn, parent_name=obj.name)))
@@ -567,7 +631,9 @@ def traced(*args):
         return traced_decorator
     else: # `@traced("method_name1", ..)' class
         method_names = args[:]
-        return lambda class_: _install_traceable_methods(class_, *method_names)
+        exclude = keywords.get("exclude", False)
+        return lambda class_: _install_traceable_methods(class_, *method_names,
+                exclude=exclude)
 
 
 __traced_original = traced
@@ -737,13 +803,24 @@ def _install_traceable_methods(class_, *method_names, **keywords):
     """Substitute tracing proxy methods for the methods named in
     *method_names* in *class_*'s ``__dict__``.
 
-    :arg class_: a class being traced
-    :arg tuple method_names: the names of the methods to be traced
-    :keyword logging.Logger logger: the logger to use for tracing
+    :arg class_:
+       a class being traced
+    :arg tuple method_names:
+       the names of the methods to be traced
+    :keyword logging.Logger logger:
+       the logger to use for tracing
+    :keyword bool exclude:
+       ``True`` to interpret *method_names* as an **exclusion** list
+       rather than an inclusion list
 
-    If *method_names* is empty, all "public", "_nonpublic", and
-    "__internal" methods, as well as the special "__init__" and
-    "__call__" methods, will be traced by default.
+    If *method_names* is empty and the *exclude* keyword is ``False``
+    (the default), then all "public", "_nonpublic", and "__internal"
+    methods, as well as the special "__init__" and "__call__" methods,
+    will be traced by default.
+
+    If the *exclude* keyword is ``True``, then the methods that will be
+    traced are the default methods (as identified above) **MINUS** any
+    methods named in *method_names*.
 
     If *logger* is unspecified, a default logger will be used to log
     tracing messages.
@@ -753,8 +830,8 @@ def _install_traceable_methods(class_, *method_names, **keywords):
         "logger", logging.getLogger(_generate_logger_name(class_)))
 
     if method_names:
-        traceable_method_names = _get_traceable_method_names(
-            method_names, class_)
+        traceable_method_names = _get_traceable_method_names(method_names,
+                class_, exclude=keywords.get("exclude", False))
     else:
         traceable_method_names = _get_default_traceable_method_names(class_)
 
@@ -782,7 +859,7 @@ def _install_traceable_methods(class_, *method_names, **keywords):
     return class_
 
 
-def _get_traceable_method_names(method_names, class_):
+def _get_traceable_method_names(method_names, class_, **keywords):
     """Filter (and possibly mangle) *method_names* so that only method
     names actually defined as methods in *cls_dict* remain.
 
@@ -790,29 +867,45 @@ def _get_traceable_method_names(method_names, class_):
        a sequence of names that should identify methods defined in
        *class_*
     :arg class_: the class being traced
+    :keyword bool exclude:
+       ``True`` to interpret *method_names* as an **exclusion** list
+       rather than an inclusion list
     :return:
        a sequence of names identifying methods that are defined in
        *class_* that will be traced
     :rtype: list
 
     .. warning::
-       A :exc:`UserWarning` is issued if any method name specified in
-       *method_names* is not actually defined in *class_*.
+       A :exc:`UserWarning` is issued if any **included** method named
+       in *method_names* is not actually defined in *class_*; or if the
+       result of filtering **excluded** methods results in an empty
+       list.
 
     """
+    exclude = keywords.get("exclude", False)
     traceable_method_names = []
 
-    for name in method_names:
-        mname = (
-            name if not _is_internal_name(name) else
-            _mangle_name(name, class_.__name__))
+    if not keywords.get("exclude", False):
+        for name in method_names:
+            mname = (
+                name if not _is_internal_name(name) else
+                _mangle_name(name, class_.__name__))
 
-        if isroutine(class_.__dict__.get(mname)):
-            traceable_method_names.append(mname)
-        else:
-            warnings.warn(
-                "%r does not identify a method defined in %s" %
-                    (name, class_.__name__))
+            if isroutine(class_.__dict__.get(mname)):
+                traceable_method_names.append(mname)
+            else:
+                warnings.warn(
+                    "%r does not identify a method defined in %s" %
+                        (name, class_.__name__))
+    else:
+        traceable_method_names = [
+                name
+                for name in _get_default_traceable_method_names(class_)
+                if _unmangle_name(name, class_.__name__) not in method_names]
+        if not traceable_method_names:
+            warnings.warn((
+                "exclude=True with the supplied method names results in NO "
+                "traceable methods for %s") % class_.__name__)
 
     return traceable_method_names
 
@@ -850,16 +943,37 @@ def _is_internal_name(name):
 
 
 def _mangle_name(internal_name, class_name):
-    """Transform *name* (which is assumed to be an "__internal" name)
-    into a "_ClassName__internal" name.
+    """Transform *internal_name* (which is assumed to be an "__internal"
+    name) into a "_ClassName__internal" name.
 
-    :arg str internal_name: the assumed-to-be-"__internal" member name
-    :arg str class_name: the name of the class where *name* is defined
-    :return: the transformed "_ClassName__internal" name
-    :rtype: str
+    :arg str internal_name:
+       the assumed-to-be-"__internal" member name
+    :arg str class_name:
+       name of the class where *internal_name* is defined
+    :return:
+       the transformed "_ClassName__internal" name
+    :rtype:
+       str
 
     """
     return "_%s%s" % (class_name.lstrip('_'), internal_name)
+
+
+def _unmangle_name(mangled_name, class_name):
+    """Transform *mangled_name* (which is assumed to be a
+    "_ClassName__internal" name) into an "__internal" name.
+
+    :arg str mangled_name:
+       a mangled "_ClassName__internal" member name
+    :arg str class_name:
+       name of the class where the (unmangled) name is defined
+    :return:
+       the transformed "__internal" name
+    :rtype:
+       str
+
+    """
+    return mangled_name.replace("_%s" % class_name.lstrip('_'), "")
 
 
 def _is_special_name(name):
