@@ -7,6 +7,7 @@ Using the ``@traced`` decorator
 * :ref:`module-traced-class`
 * :ref:`named-traced-class`
 * :ref:`specific-traced-methods`
+* :ref:`exlcude-methods-from-tracing`
 * :ref:`traced-generators`
 * :ref:`traced-nested-class`
 * :ref:`module-traced-function`
@@ -158,6 +159,50 @@ as the *first* argument (not shown below).
    TRACE:my_module.MyClass:__eq__:CALL *(79,) **{}
    TRACE:my_module.MyClass:__eq__:RETURN False
    False
+
+.. _exlcude-methods-from-tracing:
+
+Exclude certain methods of a class from tracing
+===============================================
+
+.. versionadded:: 1.3.0
+
+In cases where a class has a relatively large number of methods, and you want
+to trace *most* (but not all) of them, it is more intuitive to **exclude**
+the methods that should not be traced.
+By specifying the ``exclude=True`` keyword argument, you can "invert" the
+semantic meaning of the named method list passed to ``@traced()`` -- now
+Autologging will determine the default list of method names to trace, then
+*remove* the named methods from the list.
+
+::
+
+   # my_module.py
+
+   from autologging import traced
+
+
+   @traced("__init__", exclude=True)
+   class MyClass:
+
+      def __init__(self):
+         self._value = "ham"
+
+      def my_method(self, arg, keyword=None):
+         return "%s, %s, and %s" % (arg, self._value, keyword)
+
+::
+
+   >>> import logging, sys
+   >>> from autologging import TRACE
+   >>> logging.basicConfig(level=TRACE, stream=sys.stdout,
+   ...     format="%(levelname)s:%(name)s:%(funcName)s:%(message)s")
+   >>> from my_module import MyClass
+   >>> my_obj = MyClass() # __init__ was explicitly exlcuded
+   >>> my_obj.my_method("spam", keyword="eggs")
+   TRACE:my_module.MyClass:my_method:CALL *('spam',) **{'keyword': 'eggs'}
+   TRACE:my_module.MyClass:my_method:RETURN 'spam, ham, and eggs'
+   'spam, ham, and eggs'
 
 .. _traced-generators:
 

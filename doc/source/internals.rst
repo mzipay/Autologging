@@ -71,16 +71,14 @@ reference to the original function is stored as the ``__wrapped__``
 attribute of the replacement function.
 
 >>> from autologging import traced
->>> @traced
-... def example():
-        return "OK"
+>>> def example():
+...     return "OK"
 ... 
 >>> traced(example).__wrapped__ is example
 True
 
 >>> from autologging import traced
->>> @traced
-... class Example:
+>>> class Example:
 ...     def method(self):
 ...         return "OK"
 ... 
@@ -96,8 +94,7 @@ use the ``__wrapped__`` attribute *of the __func__ attribute* of the
 replacement classmethod or staticmethod. An example makes this clear:
 
 >>> from autologging import traced
->>> @traced
-... class Example:
+>>> class Example:
 ...     @classmethod
 ...     def class_method(cls):
 ...         return "OK"
