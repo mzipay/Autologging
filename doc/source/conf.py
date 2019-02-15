@@ -58,7 +58,7 @@ copyright = '2013, 2015, 2016, 2018, 2019 Matthew Zipay'
 # built documents.
 #
 # The short X.Y version.
-version = "1.3b0"
+version = "1.3b1"
 # The full version, including alpha/beta/rc tags.
 release = "1.3.0b0"
 

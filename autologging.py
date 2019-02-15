@@ -24,7 +24,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.info>"
-__version__ = "1.3.0b0"
+__version__ = "1.3.0b1"
 
 from functools import wraps
 from inspect import isclass, isgenerator, ismethod, isroutine
@@ -497,7 +497,7 @@ def traced(*args, **keywords):
 
     .. rubric:: Exclude specified methods from tracing
 
-    .. versionadded:: 1.3.0b0
+    .. versionadded:: 1.3.0
 
     :arg tuple method_names:
        the names of the methods that will be excluded from tracing
@@ -639,7 +639,7 @@ def traced(*args, **keywords):
 __traced_original = traced
 
 
-def _traced_noop(*args):
+def _traced_noop(*args, **keywords):
     """Turn the ``@traced`` decorator into a no-op."""
     obj = args[0] if args else None
     if obj is None:

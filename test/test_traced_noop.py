@@ -106,6 +106,10 @@ class TracedNoopTest(unittest.TestCase):
         func = _traced_noop(named_tracer, "method")(sample_function)
         self._assert_function(func)
 
+    def test_noop_function_with_exclude_keyword(self):
+        class_ = _traced_noop(exclude="method")(SampleClass)
+        self._assert_class(class_)
+
 
 def suite():
     return unittest.makeSuite(TracedNoopTest)
