@@ -592,9 +592,17 @@ def traced(*args, **keywords):
        `IronPython <http://ironpython.net/>`_ currently implement the
        ``function.__code__.co_lnotab`` attribute, so the last line
        number of a function cannot be determined by Autologging.
-       As a result, the line number reported in tracing RETURN log
-       records will actually be the line number on which the function is
-       defined.
+
+    .. versionchanged:: 1.3.1
+       Due to unavoidable inconsistencies in line number tracking across
+       Python variants (see
+       `issues/6 <https://github.com/mzipay/Autologging/issues/6>`_, as
+       of version 1.3.1 and until further notice Autologging will only
+       record the first line number of the function being traced in all
+       tracing CALL and RETURN records.
+       (Note that YIELD tracing records for generator iterators will
+       continue to record the correct line number on variants other than
+       IronPython.)
 
     """
     obj = args[0] if args else None
@@ -1126,35 +1134,6 @@ def _make_traceable_staticmethod(method_descriptor, logger):
     return staticmethod(autologging_traced_staticmethod_delegator)
 
 
-def _find_lastlineno(f_code):
-    """Return the last line number of a function.
-
-    :arg types.CodeType f_code:
-       the bytecode object for a function, as obtained from
-       ``function.__code__``
-    :return: the last physical line number of the function
-    :rtype: int
-
-    """
-    last_line_number = f_code.co_firstlineno
-
-    # Jython and IronPython do not have co_lnotab
-    if hasattr(f_code, "co_lnotab"):
-        # co_lnotab is a sequence of 2-byte offsets
-        # (address offset, line number offset), each relative to the
-        # previous; we only care about the line number offsets here, so
-        # start at index 1 and increment by 2
-        i = 1
-        while i < len(f_code.co_lnotab):
-            # co_lnotab is bytes in Python 3, but str in Python 2
-            last_line_number += (
-                f_code.co_lnotab[i] if sys.version_info[0] >= 3
-                else ord(f_code.co_lnotab[i]))
-            i += 2
-
-    return last_line_number
-
-
 class _FunctionTracingProxy(object):
     """Proxy a function invocation to capture and log the call arguments
     and return value.
@@ -1169,8 +1148,7 @@ class _FunctionTracingProxy(object):
         """
         func_code = function.__code__
         self._func_filename = func_code.co_filename
-        self._func_firstlineno = func_code.co_firstlineno
-        self._func_lastlineno = _find_lastlineno(func_code)
+        self._func_lineno = func_code.co_firstlineno
 
         self._logger = logger
 
@@ -1203,25 +1181,25 @@ class _FunctionTracingProxy(object):
 
         """
         self._logger.handle(logging.LogRecord(
-            self._logger.name,      # name
-            TRACE,                  # level
-            self._func_filename,    # pathname
-            self._func_firstlineno, # lineno
-            "CALL *%r **%r",        # msg
-            (args, keywords),       # args
-            None,                   # exc_info
+            self._logger.name,   # name
+            TRACE,               # level
+            self._func_filename, # pathname
+            self._func_lineno,   # lineno
+            "CALL *%r **%r",     # msg
+            (args, keywords),    # args
+            None,                # exc_info
             func=function.__name__))
 
         value = function(*args, **keywords)
 
         self._logger.handle(logging.LogRecord(
-            self._logger.name,     # name
-            TRACE,                 # level
-            self._func_filename,   # pathname
-            self._func_lastlineno, # lineno
-            "RETURN %r",           # msg
-            (value,),              # args
-            None,                  # exc_info
+            self._logger.name,   # name
+            TRACE,               # level
+            self._func_filename, # pathname
+            self._func_lineno,   # lineno
+            "RETURN %r",         # msg
+            (value,),            # args
+            None,                # exc_info
             func=function.__name__))
 
         return (_GeneratorIteratorTracingProxy(function, value, self._logger)
@@ -1245,8 +1223,7 @@ class _GeneratorIteratorTracingProxy(object):
            a generator iterator returned by a traced function
         :arg logging.Logger logger: the tracing logger
         """
-        self._fallback_lineno = \
-                _find_lastlineno(generator.__code__) # see _gi_lineno
+        self._g_lineno = generator.__code__.co_firstlineno
         self._gi = generator_iterator
         self._logger = logger
 
@@ -1257,28 +1234,10 @@ class _GeneratorIteratorTracingProxy(object):
 
     @property
     def _gi_lineno(self):
-        # the fallback line number is somewhat of a hack for IronPython,
-        # which does not track gi.gi_frame.f_lineno correctly:
-        #---------------------------------------------------------------
-        # >>> def g():
-        # ...   for c in "spam":
-        # ...     yield c
-        # ...
-        # >>> gi = g()
-        # >>> gi.gi_frame.f_lineno
-        # 1
-        # >>> next(gi)
-        # 's'
-        # >>> gi.gi_frame.f_lineno
-        # 1                         <-- should be 3
-        #---------------------------------------------------------------
-        # By using the fallback line number
-        # (i.e. _find_lastlineno(generator.__code__)), at least the line
-        # number reported in the tracing log records will point to the
-        # generator function.
-        return (
-                self._gi.gi_frame.f_lineno if not _is_ironpython
-                else self._fallback_lineno)
+        # NOTE: IronPython does not track gi.gi_frame.f_lineno
+        # correctly (always reported as 1).
+        return self._gi.gi_frame.f_lineno if not _is_ironpython \
+                else self._g_lineno
 
     # NOTE: implement __iter__ instead of next/__next__ for simpler
     # Python 2/3 compatibility

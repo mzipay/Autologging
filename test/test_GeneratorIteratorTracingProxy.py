@@ -41,7 +41,7 @@ from autologging import (
     __version__,
 )
 
-from test import get_lineno, has_co_lnotab, list_handler
+from test import get_lineno, list_handler
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)

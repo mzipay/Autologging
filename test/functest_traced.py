@@ -38,7 +38,6 @@ from autologging import TRACE, __version__, _is_ironpython
 from test import (
     dummy_module_logger,
     get_dummy_lineno,
-    has_co_lnotab,
     list_handler,
     named_tracer,
 )
@@ -69,8 +68,7 @@ class _TracedFunctionalTest(unittest.TestCase):
         self._assert_trace_record(
             return_record, traced_function, expected_logger_name, "RETURN %r",
             expected_args,
-            get_dummy_lineno(
-                ("#%s:LN" if has_co_lnotab else "#%s:L1") % marker))
+            get_dummy_lineno("#%s:L1" % marker))
 
     def _assert_trace_record(
             self, trace_record, traced_function, expected_logger_name,

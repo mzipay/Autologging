@@ -41,7 +41,7 @@ from autologging import (
     __version__,
 )
 
-from test import get_lineno, has_co_lnotab, list_handler
+from test import get_lineno, list_handler
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)
@@ -49,15 +49,11 @@ logging.getLogger().setLevel(logging.FATAL + 1)
 
 def sample_function(arg, keyword=None): #s_f:L1
     x = arg.upper()
-    return "%s %s" % (x, keyword) #s_f:LN
+    return "%s %s" % (x, keyword)
 
 
 _expected_function_filename = sample_function.__code__.co_filename
-_expected_function_firstlineno = get_lineno(
-        _expected_function_filename, "#s_f:L1")
-_expected_function_lastlineno = (get_lineno(
-        _expected_function_filename, "#s_f:LN")
-        if has_co_lnotab else _expected_function_firstlineno)
+_expected_function_lineno = get_lineno(_expected_function_filename, "#s_f:L1")
 
 
 def sample_generator(count): #s_g:L1
@@ -66,27 +62,20 @@ def sample_generator(count): #s_g:L1
 
 
 _expected_generator_filename = sample_generator.__code__.co_filename
-_expected_generator_firstlineno = get_lineno(
+_expected_generator_lineno = get_lineno(
         _expected_generator_filename, "#s_g:L1")
-_expected_generator_lastlineno = (get_lineno(
-        _expected_generator_filename, "#s_g:LY")
-        if has_co_lnotab else _expected_generator_firstlineno)
 
 
 class SampleClass(object):
     
     def method(self, arg, keyword=None): #SC.m:L1
         x = arg.upper()
-        return "%s %s" % (x, keyword) #SC.m:LN
+        return "%s %s" % (x, keyword)
 
 
 _method = SampleClass.__dict__["method"]
 _expected_method_filename = _method.__code__.co_filename
-_expected_method_firstlineno = get_lineno(
-        _expected_method_filename, "#SC.m:L1")
-_expected_method_lastlineno = (get_lineno(
-        _expected_method_filename, "#SC.m:LN")
-        if has_co_lnotab else _expected_method_firstlineno)
+_expected_method_lineno = get_lineno(_expected_method_filename, "#SC.m:L1")
 
 _module_logger = logging.getLogger(__name__)
 _module_logger.setLevel(TRACE)
@@ -114,34 +103,21 @@ class FunctionTracingProxyTest(unittest.TestCase):
 
     def test_init_sets_expected_log_record_attributes_for_function(self):
         self.assertEqual(
-            _expected_function_filename,
-            self._function_proxy._func_filename)
+            _expected_function_filename, self._function_proxy._func_filename)
         self.assertEqual(
-            _expected_function_firstlineno,
-            self._function_proxy._func_firstlineno)
-        self.assertEqual(
-            _expected_function_lastlineno,
-            self._function_proxy._func_lastlineno)
+            _expected_function_lineno, self._function_proxy._func_lineno)
 
     def test_init_sets_expected_log_record_attributes_for_generator(self):
         self.assertEqual(
-            _expected_generator_filename,
-            self._generator_proxy._func_filename)
+            _expected_generator_filename, self._generator_proxy._func_filename)
         self.assertEqual(
-            _expected_generator_firstlineno,
-            self._generator_proxy._func_firstlineno)
-        self.assertEqual(
-            _expected_generator_lastlineno,
-            self._generator_proxy._func_lastlineno)
+            _expected_generator_lineno, self._generator_proxy._func_lineno)
 
     def test_init_sets_expected_log_record_attributes_for_method(self):
         self.assertEqual(
             _expected_method_filename, self._method_proxy._func_filename)
         self.assertEqual(
-            _expected_method_firstlineno,
-            self._method_proxy._func_firstlineno)
-        self.assertEqual(
-            _expected_method_lastlineno, self._method_proxy._func_lastlineno)
+            _expected_method_lineno, self._method_proxy._func_lineno)
 
     def test_trace_function_call(self):
         f_args = ("spam",)
@@ -157,7 +133,7 @@ class FunctionTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", call_record.levelname)
         self.assertEqual(TRACE, call_record.levelno)
         self.assertEqual(_expected_function_filename, call_record.pathname)
-        self.assertEqual(_expected_function_firstlineno, call_record.lineno)
+        self.assertEqual(_expected_function_lineno, call_record.lineno)
         self.assertEqual("sample_function", call_record.funcName)
 
     def test_trace_function_return(self):
@@ -176,7 +152,7 @@ class FunctionTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", return_record.levelname)
         self.assertEqual(TRACE, return_record.levelno)
         self.assertEqual(_expected_function_filename, return_record.pathname)
-        self.assertEqual(_expected_function_lastlineno, return_record.lineno)
+        self.assertEqual(_expected_function_lineno, return_record.lineno)
         self.assertEqual("sample_function", return_record.funcName)
 
     def test_trace_generator_call(self):
@@ -193,7 +169,7 @@ class FunctionTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", call_record.levelname)
         self.assertEqual(TRACE, call_record.levelno)
         self.assertEqual(_expected_generator_filename, call_record.pathname)
-        self.assertEqual(_expected_generator_firstlineno, call_record.lineno)
+        self.assertEqual(_expected_generator_lineno, call_record.lineno)
         self.assertEqual("sample_generator", call_record.funcName)
 
     def test_trace_generator_return(self):
@@ -218,7 +194,7 @@ class FunctionTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", return_record.levelname)
         self.assertEqual(TRACE, return_record.levelno)
         self.assertEqual(_expected_generator_filename, return_record.pathname)
-        self.assertEqual(_expected_generator_lastlineno, return_record.lineno)
+        self.assertEqual(_expected_generator_lineno, return_record.lineno)
         self.assertEqual("sample_generator", return_record.funcName)
 
     def test_trace_method_call(self):
@@ -237,7 +213,7 @@ class FunctionTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", call_record.levelname)
         self.assertEqual(TRACE, call_record.levelno)
         self.assertEqual(_expected_method_filename, call_record.pathname)
-        self.assertEqual(_expected_method_firstlineno, call_record.lineno)
+        self.assertEqual(_expected_method_lineno, call_record.lineno)
         self.assertEqual("method", call_record.funcName)
 
     def test_trace_method_return(self):
@@ -258,7 +234,7 @@ class FunctionTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", return_record.levelname)
         self.assertEqual(TRACE, return_record.levelno)
         self.assertEqual(_expected_method_filename, return_record.pathname)
-        self.assertEqual(_expected_method_lastlineno, return_record.lineno)
+        self.assertEqual(_expected_method_lineno, return_record.lineno)
         self.assertEqual("method", return_record.funcName)
 
 

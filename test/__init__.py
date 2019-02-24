@@ -38,7 +38,6 @@ __all__ = [
     "dummy_module_logger",
     "get_lineno",
     "get_dummy_lineno",
-    "has_co_lnotab",
     "list_handler",
     "named_logger",
     "named_tracer",
@@ -58,9 +57,6 @@ def get_lineno(filename, marker):
 
 def get_dummy_lineno(marker):
     return get_lineno("dummy.py", marker)
-
-
-has_co_lnotab = hasattr(get_dummy_lineno.__code__, "co_lnotab")
 
 
 class _ListHandler(logging.Handler):
@@ -112,7 +108,6 @@ def suite():
         test_make_traceable_instancemethod,
         test_make_traceable_classmethod,
         test_make_traceable_staticmethod,
-        test_find_lastlineno,
         test_FunctionTracingProxy,
         test_GeneratorIteratorTracingProxy,
         functest_logged,
@@ -142,7 +137,6 @@ def suite():
     suite.addTest(test_make_traceable_instancemethod.suite())
     suite.addTest(test_make_traceable_classmethod.suite())
     suite.addTest(test_make_traceable_staticmethod.suite())
-    suite.addTest(test_find_lastlineno.suite())
     suite.addTest(test_FunctionTracingProxy.suite())
     suite.addTest(test_GeneratorIteratorTracingProxy.suite())
     suite.addTest(functest_logged.suite())
