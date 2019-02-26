@@ -23,11 +23,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
-__version__ = "1.3.1"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
+__version__ = "1.3.2"
 
 from functools import wraps
-from inspect import isclass, isgenerator, ismethod, isroutine
+from inspect import isclass, isgenerator, isroutine
 import logging
 import os
 import platform
@@ -35,12 +35,15 @@ import sys
 from types import FunctionType
 import warnings
 
-# BEGIN IronPython detection
+# BEGIN Jython/IronPython detection
 # (this needs to be implemented consistently w/r/t Aglyph's aglyph._compat)
 try:
     _py_impl = platform.python_implementation()
 except:
     _py_impl = "Python"
+
+_is_jython = \
+    _py_impl == "Jython" and getattr(sys, "JYTHON_JAR", None) is not None
 
 try:
     import clr
@@ -50,7 +53,7 @@ except:
     _has_clr = False
 
 _is_ironpython = _py_impl == "IronPython" and _has_clr
-# END IronPython detection
+# END Jython/IronPython detection
 
 __all__ = [
     "TRACE",
@@ -623,7 +626,7 @@ def traced(*args, **keywords):
 
         def traced_decorator(class_or_fn):
             if isclass(class_or_fn):
-                # `@traced(logger)' or `@traced(logger, "method_name1", ..)' class
+                # `@traced(logger)' or `@traced(logger, "method", ..)' class
                 return _install_traceable_methods(
                     class_or_fn, *method_names, exclude=exclude,
                     logger=logging.getLogger(
@@ -1207,78 +1210,129 @@ class _FunctionTracingProxy(object):
 
 
 class _GeneratorIteratorTracingProxy(object):
-    """Proxy the iterator protocol for a generator iterator to capture
-    and trace ``yield`` and ``StopIteration`` events.
+    """Proxy a generator iterator to capture and trace *YIELD*, *SEND*,
+    *THROW*, *CLOSE* and *STOP* events.
+
+    .. note::
+       Generator iterators cannot be "rewound." A generator iterator
+       that has been exhausted will continue to raise ``StopIteration``
+       on all subsequent calls to ``next()``, and Autologging will
+       dutifully trace each of those events. This behavior is by design;
+       if a program is failing due to an unexpected ``StopIteration``
+       exception, then the (traced) program should be able to identify
+       when/where the errant ``next()`` call was made.
 
     """
 
     #: An easily-queriable marker.
     __autologging_traced__ = True
 
-    def __init__(self, generator, generator_iterator, logger):
+    def __init__(self, gfunc, giter, logger):
         """
-        :arg generator:
-           the generator function that produced *generator_iterator*
-        :arg types.GeneratorType generator_iterator:
-           a generator iterator returned by a traced function
+        :arg gfunc:
+           the generator function that returned *giter*
+        :arg types.GeneratorType iterator:
+           the generator iterator returned by *gfunc*
         :arg logging.Logger logger: the tracing logger
         """
-        self._g_lineno = generator.__code__.co_firstlineno
-        self._gi = generator_iterator
+        # this is a "fallback" line number for IronPython
+        self._gfunc_lineno = gfunc.__code__.co_firstlineno
+        self._giter = giter
         self._logger = logger
 
+    #: The wrapped generator iterator.
     @property
     def __wrapped__(self):
-        """The original generator iterator."""
-        return self._gi
+        return self._giter
 
+    #: The name of the wrapped generator iterator.
     @property
-    def _gi_lineno(self):
-        # NOTE: IronPython does not track gi.gi_frame.f_lineno
-        # correctly (always reported as 1).
-        return self._gi.gi_frame.f_lineno if not _is_ironpython \
-                else self._g_lineno
+    def __name__(self):
+        return self._giter.__name__
 
-    # NOTE: implement __iter__ instead of next/__next__ for simpler
-    # Python 2/3 compatibility
+    #: The current line number of the wrapped generator iterator.
+    @property
+    def _lineno(self):
+        # NOTE: IronPython does not track gi_frame.f_lineno correctly (always
+        #       reported as 1).
+        return (getattr(self._giter.gi_frame, "f_lineno", self._gfunc_lineno)
+                if not _is_ironpython else self._gfunc_lineno)
+
     def __iter__(self):
-        """Trace each ``yield`` and the terminating ``StopIteration``
-        for the wrapped generator iterator.
+        """Return a self-reference.
+
+        This method (along with :meth:`__next__`) implements the
+        iterator protocol for the proxy object.
 
         """
-        # get this now in case the generator iterator is empty
-        # (gi.gi_frame is None when the generator iterator is finished!)
-        gi_lineno = self._gi_lineno
+        return self
 
-        for next_value in self._gi:
-            gi_lineno = self._gi_lineno
-            self._logger.handle(logging.LogRecord(
-                self._logger.name,              # name
-                TRACE,                          # level
-                self._gi.gi_code.co_filename,   # pathname
-                gi_lineno,                      # lineno
-                "YIELD %r",                     # msg
-                (next_value,),                  # args
-                None,                           # exc_info
-                func=self._gi.__name__
-            ))
-            yield next_value
-
+    def _trace(self, message, *message_args):
+        giter = self._giter
         self._logger.handle(logging.LogRecord(
-            self._logger.name,              # name
-            TRACE,                          # level
-            self._gi.gi_code.co_filename,   # pathname
-            gi_lineno,                      # lineno
-            "STOP",                         # msg
-            tuple(),                        # args
-            None,                           # exc_info
-            func=self._gi.__name__
-        ))
+            self._logger.name,         # name
+            TRACE,                     # level
+            giter.gi_code.co_filename, # pathname
+            self._lineno,              # lineno
+            message,                   # msg
+            message_args,              # args
+            None,                      # exc_info
+            func=giter.__name__))
 
-    def __getattr__(self, name):
-        """Delegate unimplemented methods/properties to the original
-        generator iterator.
+    def __next__(self):
+        """Attempt to return the next value from the wrapped generator
+        iterator.
+
+        If a value is obtained, log the event at :obj:`TRACE` level in a
+        "YIELD" record. If the wrapped generator iterator is exhausted,
+        log the ``StopIteration`` event (exception) at :obj:`TRACE`
+        level in a "STOP" record.
+
+        This method (along with :meth:`__iter__`) implements the
+        iterator protocol for the proxy object.
 
         """
-        return getattr(self._gi, name)
+        giter = self._giter
+        try:
+            value = next(giter)
+        except StopIteration:
+            self._trace("STOP %r", giter)
+            raise
+        else:
+            self._trace("YIELD %r %r", giter, value)
+            return value
+
+    # PYVER: 2.7 compatibility
+    next = __next__
+
+    def send(self, value):
+        """Send *value* to the wrapped generator iterator, logging
+        the event at :obj:`TRACE` level in a "SEND" record.
+
+        """
+        giter = self._giter
+        self._trace("SEND %r %r", giter, value)
+        return giter.send(value)
+
+    def throw(self, exception):
+        """Cause the wrapped generator iterator to raise *exception*,
+        logging the event at :obj:`TRACE` level in a "THROW" record.
+
+        :arg Exception exception:
+           the exception object that the wrapped generator iterator
+           should throw
+
+        """
+        giter = self._giter
+        self._trace("THROW %r %r", giter, exception)
+        giter.throw(exception)
+
+    def close(self):
+        """Close the wrapped generator iterator, logging the event
+        at :obj:`TRACE` level in a "CLOSE" record.
+
+        """
+        giter = self._giter
+        self._trace("CLOSE %r", giter)
+        giter.close()
 

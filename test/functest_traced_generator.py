@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -31,12 +31,12 @@ See `issues/3 <https://github.com/mzipay/Autologging/issues/3>`_.
 
 """
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 import logging
 import unittest
 
-from autologging import TRACE, __version__
+from autologging import _is_jython, _is_ironpython, TRACE, __version__
 
 from test import (
     dummy_module_logger,
@@ -53,20 +53,26 @@ logging.getLogger().setLevel(logging.FATAL + 1)
 
 class _TracedGeneratorFunctionalTest(_TracedFunctionalTest):
 
+    def _linenumbers(self, marker):
+        return (get_dummy_lineno("#%s:L1" % marker),
+                get_dummy_lineno("#%s:LY" % marker))
+
     def _assert_yield_record(
             self, yield_record, traced_generator, expected_logger_name,
             expected_args, marker):
+        (L1, LY) = self._linenumbers(marker)
         self._assert_trace_record(
             yield_record, traced_generator, expected_logger_name,
-            "YIELD %r", expected_args,
-            get_dummy_lineno("#%s:LY" % marker))
+            "YIELD %r %r", expected_args, LY if not _is_ironpython else L1)
 
     def _assert_stop_record(
             self, stop_record, traced_generator, expected_logger_name,
-            marker):
+            expected_args, marker):
+        (L1, LY) = self._linenumbers(marker)
+        LS = L1 if not _is_jython else (LY - 1)
         self._assert_trace_record(
-            stop_record, traced_generator, expected_logger_name, "STOP",
-            tuple(), get_dummy_lineno("#%s:LY" % marker))
+            stop_record, traced_generator, expected_logger_name, "STOP %r",
+            expected_args, LS)
 
 
 class TracedGeneratorFunctionalTest(_TracedGeneratorFunctionalTest):
@@ -92,13 +98,13 @@ class TracedGeneratorFunctionalTest(_TracedGeneratorFunctionalTest):
             "test.dummy.GeneratorClass", (geniter.__wrapped__,), "GC.s_g")
         self._assert_yield_record(
             list_handler.records[2], traced_function,
-            "test.dummy.GeneratorClass", ('Z',), "GC.s_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__, 'Z',), "GC.s_g")
         self._assert_yield_record(
             list_handler.records[3], traced_function,
-            "test.dummy.GeneratorClass", ('M',), "GC.s_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__, 'M',), "GC.s_g")
         self._assert_stop_record(
             list_handler.records[4], traced_function,
-            "test.dummy.GeneratorClass", "GC.s_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__,), "GC.s_g")
 
     def test_classmethod_generator(self):
         geniter = GeneratorClass.class_generator("MZ")
@@ -117,13 +123,13 @@ class TracedGeneratorFunctionalTest(_TracedGeneratorFunctionalTest):
             "test.dummy.GeneratorClass", (geniter.__wrapped__,), "GC.c_g")
         self._assert_yield_record(
             list_handler.records[2], traced_function,
-            "test.dummy.GeneratorClass", ('Z',), "GC.c_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__, 'Z',), "GC.c_g")
         self._assert_yield_record(
             list_handler.records[3], traced_function,
-            "test.dummy.GeneratorClass", ('M',), "GC.c_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__, 'M',), "GC.c_g")
         self._assert_stop_record(
             list_handler.records[4], traced_function,
-            "test.dummy.GeneratorClass", "GC.c_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__,), "GC.c_g")
 
     def test_method_generator(self):
         obj = GeneratorClass()
@@ -143,13 +149,13 @@ class TracedGeneratorFunctionalTest(_TracedGeneratorFunctionalTest):
             "test.dummy.GeneratorClass", (geniter.__wrapped__,), "GC.m_g")
         self._assert_yield_record(
             list_handler.records[2], traced_function,
-            "test.dummy.GeneratorClass", ('Z',), "GC.m_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__, 'Z',), "GC.m_g")
         self._assert_yield_record(
             list_handler.records[3], traced_function,
-            "test.dummy.GeneratorClass", ('M',), "GC.m_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__, 'M',), "GC.m_g")
         self._assert_stop_record(
             list_handler.records[4], traced_function,
-            "test.dummy.GeneratorClass", "GC.m_g")
+            "test.dummy.GeneratorClass", (geniter.__wrapped__,), "GC.m_g")
 
     def test_traced_function_generator(self):
         geniter = traced_generator("MZ")
@@ -166,13 +172,13 @@ class TracedGeneratorFunctionalTest(_TracedGeneratorFunctionalTest):
             "test.dummy", (geniter.__wrapped__,), "t_g")
         self._assert_yield_record(
             list_handler.records[2], traced_generator.__wrapped__,
-            "test.dummy", ('Z',), "t_g")
+            "test.dummy", (geniter.__wrapped__, 'Z',), "t_g")
         self._assert_yield_record(
             list_handler.records[3], traced_generator.__wrapped__,
-            "test.dummy", ('M',), "t_g")
+            "test.dummy", (geniter.__wrapped__, 'M',), "t_g")
         self._assert_stop_record(
             list_handler.records[4], traced_generator.__wrapped__,
-            "test.dummy", "t_g")
+            "test.dummy", (geniter.__wrapped__,), "t_g")
 
 
 def suite():

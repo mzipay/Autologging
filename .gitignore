@@ -15,4 +15,5 @@ doc/build/
 doc/bootswatch/
 autologging-*-env/
 NOTES.txt
+runtestsuite.py
 

@@ -248,7 +248,7 @@ Because the *generator* function ``my_iter`` is traced, Autologging will
 dutifully emit the CALL/RETURN trace logging records::
 
    TRACE:my_module.MyClass:my_iter:CALL *('spam',) **{}
-   TRACE:my_module.MyClass:my_iter:RETURN <generator object MyClass.my_iter at 0x7f54f4043840>
+   TRACE:my_module.MyClass:my_iter:RETURN <generator object MyClass.my_iter at 0x7f90d49ef048>
    (continued below)
 
 In versions of Autologging **prior to 1.2.0**, this would be the only
@@ -256,15 +256,15 @@ tracing output. But as of version 1.2.0, the *generator iterator* is
 now traced as well, and will emit additional YIELD/STOP trace logging
 records::
 
-   TRACE:my_module.MyClass:my_iter:YIELD 'M'
+   TRACE:my_module.MyClass:my_iter:YIELD <generator object MyClass.my_iter at 0x7f90d49ef048> 'M'
    M
-   TRACE:my_module.MyClass:my_iter:YIELD 'A'
+   TRACE:my_module.MyClass:my_iter:YIELD <generator object MyClass.my_iter at 0x7f90d49ef048> 'A'
    A
-   TRACE:my_module.MyClass:my_iter:YIELD 'P'
+   TRACE:my_module.MyClass:my_iter:YIELD <generator object MyClass.my_iter at 0x7f90d49ef048> 'P'
    P
-   TRACE:my_module.MyClass:my_iter:YIELD 'S'
+   TRACE:my_module.MyClass:my_iter:YIELD <generator object MyClass.my_iter at 0x7f90d49ef048> 'S'
    S
-   TRACE:my_module.MyClass:my_iter:STOP
+   TRACE:my_module.MyClass:my_iter:STOP <generator object MyClass.my_iter at 0x7f90d49ef048>
 
 .. _traced-nested-class:
 

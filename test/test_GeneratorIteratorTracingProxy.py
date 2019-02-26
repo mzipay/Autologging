@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -28,13 +28,14 @@
 
 """
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 from inspect import isgenerator
 import logging
 import unittest
 
 from autologging import (
+    _is_jython,
     _is_ironpython,
     TRACE,
     _GeneratorIteratorTracingProxy,
@@ -47,44 +48,54 @@ from test import get_lineno, list_handler
 logging.getLogger().setLevel(logging.FATAL + 1)
 
 
-def sample_generator(count): #s_g:L1
+def gf(count): #gf:L1
     for i in range(count):
-        yield i + 1 #s_g:LY
+        yield i + 1 #gf:LY
 
 
-_expected_function_filename = sample_generator.__code__.co_filename
+_expected_function_filename = gf.__code__.co_filename
 # generator iterators have a built-in reference to a frame object, so the
 # line number *should* be consistent... except for IronPython
-_expected_function_lineno = (
-        get_lineno(_expected_function_filename, "#s_g:LY")
-        if not _is_ironpython else
-        get_lineno(_expected_function_filename, "#s_g:L1"))
+_expected_function_L1 = get_lineno(_expected_function_filename, "#gf:L1")
+_expected_function_LY = (
+        get_lineno(_expected_function_filename, "#gf:LY")
+        if not _is_ironpython else _expected_function_L1)
+_expected_function_LS = (
+        _expected_function_L1
+        if not _is_jython else (_expected_function_LY - 1))
 
 
-class SampleClass(object):
-    
-    def method(self, count): #SC.m:L1
+class Class(object):
+
+    def gm(self, count): #C.gm:L1
         for i in range(count):
-            yield i + 1 #SC.m:LY
+            yield i + 1 #C.gm:LY
 
 
-_method = SampleClass.__dict__["method"]
+_method = Class.__dict__["gm"]
 _expected_method_filename = _method.__code__.co_filename
 # generator iterators have a built-in reference to a frame object, so the
 # line number *should* be consistent... except for IronPython
-_expected_method_lineno = (
-        get_lineno(_expected_function_filename, "#SC.m:LY")
-        if not _is_ironpython else
-        get_lineno(_expected_function_filename, "#SC.m:L1"))
+_expected_method_L1 = get_lineno(_expected_method_filename, "#C.gm:L1")
+_expected_method_LY = (
+        get_lineno(_expected_method_filename, "#C.gm:LY")
+        if not _is_ironpython else _expected_method_L1)
+_expected_method_LS = (
+        _expected_method_L1
+        if not _is_jython else (_expected_method_LY - 1))
 
 _module_logger = logging.getLogger(__name__)
 _module_logger.setLevel(TRACE)
 _module_logger.addHandler(list_handler)
 
-_class_logger = logging.getLogger(__name__ + ".SampleClass")
+_class_logger = logging.getLogger(__name__ + ".Class")
 _class_logger.propagate = False
 _class_logger.setLevel(TRACE)
 _class_logger.addHandler(list_handler)
+
+
+class TestException(Exception):
+    pass
 
 
 class GeneratorIteratorTracingProxyTest(unittest.TestCase):
@@ -93,85 +104,248 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
 
     """
 
-    @classmethod
-    def setUpClass(cls):
-        # note: generator iterators cannot be "rewound"
-        cls._function_proxy = _GeneratorIteratorTracingProxy(
-                sample_generator, sample_generator(2), _module_logger)
-        cls._method_proxy = _GeneratorIteratorTracingProxy(
-                SampleClass.__dict__["method"], SampleClass().method(2),
-                _class_logger)
-
     def setUp(self):
         list_handler.reset()
 
-    def test_trace_function_yield_stop(self):
-        self.assertEqual([1, 2], list(self._function_proxy))
+    def test_function_yield1_log_record(self):
+        gi = gf(2)
+        proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
+
+        self.assertEqual(1, next(proxy))
+        self.assertEqual(1, len(list_handler.records))
+
+        record = list_handler.records[0]
+        self.assertEqual(_module_logger.name, record.name)
+        self.assertEqual("YIELD %r %r", record.msg)
+        self.assertEqual((gi, 1,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_function_filename, record.pathname)
+        self.assertEqual(_expected_function_LY, record.lineno)
+        self.assertEqual("gf", record.funcName)
+
+    def test_function_yield2_log_record(self):
+        gi = gf(2)
+        proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
+
+        self.assertEqual(1, next(proxy))
+        self.assertEqual(2, next(proxy))
+        self.assertEqual(2, len(list_handler.records))
+
+        record = list_handler.records[1]
+        self.assertEqual(_module_logger.name, record.name)
+        self.assertEqual("YIELD %r %r", record.msg)
+        self.assertEqual((gi, 2,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_function_filename, record.pathname)
+        self.assertEqual(_expected_function_LY, record.lineno)
+        self.assertEqual("gf", record.funcName)
+
+    def test_function_stop_log_record(self):
+        gi = gf(2)
+        proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
+
+        self.assertEqual(1, next(proxy))
+        self.assertEqual(2, next(proxy))
+        self.assertRaises(StopIteration, next, proxy)
         self.assertEqual(3, len(list_handler.records))
 
-        yield1_record = list_handler.records[0]
-        self.assertEqual(_module_logger.name, yield1_record.name)
-        self.assertEqual("YIELD %r", yield1_record.msg)
-        self.assertEqual((1,), yield1_record.args)
-        self.assertEqual("TRACE", yield1_record.levelname)
-        self.assertEqual(TRACE, yield1_record.levelno)
-        self.assertEqual(_expected_function_filename, yield1_record.pathname)
-        self.assertEqual(_expected_function_lineno, yield1_record.lineno)
-        self.assertEqual("sample_generator", yield1_record.funcName)
+        record = list_handler.records[2]
+        self.assertEqual(_module_logger.name, record.name)
+        self.assertEqual("STOP %r", record.msg)
+        self.assertEqual((gi,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_function_filename, record.pathname)
+        self.assertEqual(_expected_function_LS, record.lineno)
+        self.assertEqual("gf", record.funcName)
 
-        yield2_record = list_handler.records[1]
-        self.assertEqual(_module_logger.name, yield2_record.name)
-        self.assertEqual("YIELD %r", yield2_record.msg)
-        self.assertEqual((2,), yield2_record.args)
-        self.assertEqual("TRACE", yield2_record.levelname)
-        self.assertEqual(TRACE, yield2_record.levelno)
-        self.assertEqual(_expected_function_filename, yield2_record.pathname)
-        self.assertEqual(_expected_function_lineno, yield2_record.lineno)
-        self.assertEqual("sample_generator", yield2_record.funcName)
+    def test_function_send_log_record(self):
+        gi = gf(2)
+        proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
 
-        stop_record = list_handler.records[2]
-        self.assertEqual(_module_logger.name, stop_record.name)
-        self.assertEqual("STOP", stop_record.msg)
-        self.assertEqual(tuple(), stop_record.args)
-        self.assertEqual("TRACE", stop_record.levelname)
-        self.assertEqual(TRACE, stop_record.levelno)
-        self.assertEqual(_expected_function_filename, stop_record.pathname)
-        self.assertEqual(_expected_function_lineno, stop_record.lineno)
-        self.assertEqual("sample_generator", stop_record.funcName)
+        # proxy.send(None) should be equivalent to next(proxy)
+        self.assertEqual(1, proxy.send(None))
+        self.assertEqual(1, len(list_handler.records))
 
-    def test_trace_method_yield_stop(self):
-        self.assertEqual([1, 2], list(self._method_proxy))
+        record = list_handler.records[0]
+        self.assertEqual(_module_logger.name, record.name)
+        self.assertEqual("SEND %r %r", record.msg)
+        self.assertEqual((gi, None,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_function_filename, record.pathname)
+        # in Jython, the generator iterator doesn't even have a line number
+        # at this point (it's 0)
+        self.assertEqual(_expected_function_L1 if not _is_jython else 0,
+                record.lineno)
+        self.assertEqual("gf", record.funcName)
+
+    def test_function_throw_log_record(self):
+        gi = gf(2)
+        proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
+        testex = TestException("test")
+
+        self.assertRaises(TestException, proxy.throw, testex)
+        self.assertEqual(1, len(list_handler.records))
+
+        record = list_handler.records[0]
+        self.assertEqual(_module_logger.name, record.name)
+        self.assertEqual("THROW %r %r", record.msg)
+        self.assertEqual((gi, testex,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_function_filename, record.pathname)
+        # in Jython, the generator iterator doesn't even have a line number
+        # at this point (it's 0)
+        self.assertEqual(_expected_function_L1 if not _is_jython else 0,
+                record.lineno)
+        self.assertEqual("gf", record.funcName)
+
+    def test_function_close_log_record(self):
+        gi = gf(2)
+        proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
+
+        proxy.close()
+        self.assertRaises(StopIteration, next, proxy)
+        self.assertEqual(2, len(list_handler.records)) # CLOSE, STOP
+
+        record = list_handler.records[0]
+        self.assertEqual(_module_logger.name, record.name)
+        self.assertEqual("CLOSE %r", record.msg)
+        self.assertEqual((gi,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_function_filename, record.pathname)
+        # in Jython, the generator iterator doesn't even have a line number
+        # at this point (it's 0)
+        self.assertEqual(_expected_function_L1 if not _is_jython else 0,
+                record.lineno)
+        self.assertEqual("gf", record.funcName)
+
+    def test_method_yield1_log_record(self):
+        obj = Class()
+        gi = obj.gm(2)
+        proxy = _GeneratorIteratorTracingProxy(obj.gm, gi, _class_logger)
+
+        self.assertEqual(1, next(proxy))
+        self.assertEqual(1, len(list_handler.records))
+
+        record = list_handler.records[0]
+        self.assertEqual(_class_logger.name, record.name)
+        self.assertEqual("YIELD %r %r", record.msg)
+        self.assertEqual((gi, 1,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_method_filename, record.pathname)
+        self.assertEqual(_expected_method_LY, record.lineno)
+        self.assertEqual("gm", record.funcName)
+
+    def test_method_yield2_log_record(self):
+        obj = Class()
+        gi = obj.gm(2)
+        proxy = _GeneratorIteratorTracingProxy(obj.gm, gi, _class_logger)
+
+        self.assertEqual(1, next(proxy))
+        self.assertEqual(2, next(proxy))
+        self.assertEqual(2, len(list_handler.records))
+
+        record = list_handler.records[1]
+        self.assertEqual(_class_logger.name, record.name)
+        self.assertEqual("YIELD %r %r", record.msg)
+        self.assertEqual((gi, 2,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_method_filename, record.pathname)
+        self.assertEqual(_expected_method_LY, record.lineno)
+        self.assertEqual("gm", record.funcName)
+
+    def test_method_stop_log_record(self):
+        obj = Class()
+        gi = obj.gm(2)
+        proxy = _GeneratorIteratorTracingProxy(obj.gm, gi, _class_logger)
+
+        self.assertEqual(1, next(proxy))
+        self.assertEqual(2, next(proxy))
+        self.assertRaises(StopIteration, next, proxy)
         self.assertEqual(3, len(list_handler.records))
 
-        yield1_record = list_handler.records[0]
-        self.assertEqual(_class_logger.name, yield1_record.name)
-        self.assertEqual("YIELD %r", yield1_record.msg)
-        self.assertEqual((1,), yield1_record.args)
-        self.assertEqual("TRACE", yield1_record.levelname)
-        self.assertEqual(TRACE, yield1_record.levelno)
-        self.assertEqual(_expected_method_filename, yield1_record.pathname)
-        self.assertEqual(_expected_method_lineno, yield1_record.lineno)
-        self.assertEqual("method", yield1_record.funcName)
+        record = list_handler.records[2]
+        self.assertEqual(_class_logger.name, record.name)
+        self.assertEqual("STOP %r", record.msg)
+        self.assertEqual((gi,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_method_filename, record.pathname)
+        self.assertEqual(_expected_method_LS, record.lineno)
+        self.assertEqual("gm", record.funcName)
 
-        yield2_record = list_handler.records[1]
-        self.assertEqual(_class_logger.name, yield2_record.name)
-        self.assertEqual("YIELD %r", yield2_record.msg)
-        self.assertEqual((2,), yield2_record.args)
-        self.assertEqual("TRACE", yield2_record.levelname)
-        self.assertEqual(TRACE, yield2_record.levelno)
-        self.assertEqual(_expected_method_filename, yield2_record.pathname)
-        self.assertEqual(_expected_method_lineno, yield2_record.lineno)
-        self.assertEqual("method", yield2_record.funcName)
+    def test_method_send_log_record(self):
+        obj = Class()
+        gi = obj.gm(2)
+        proxy = _GeneratorIteratorTracingProxy(obj.gm, gi, _class_logger)
 
-        stop_record = list_handler.records[2]
-        self.assertEqual(_class_logger.name, stop_record.name)
-        self.assertEqual("STOP", stop_record.msg)
-        self.assertEqual(tuple(), stop_record.args)
-        self.assertEqual("TRACE", stop_record.levelname)
-        self.assertEqual(TRACE, stop_record.levelno)
-        self.assertEqual(_expected_method_filename, stop_record.pathname)
-        self.assertEqual(_expected_method_lineno, stop_record.lineno)
-        self.assertEqual("method", stop_record.funcName)
+        # proxy.send(None) should be equivalent to next(proxy)
+        self.assertEqual(1, proxy.send(None))
+        self.assertEqual(1, len(list_handler.records))
+
+        record = list_handler.records[0]
+        self.assertEqual(_class_logger.name, record.name)
+        self.assertEqual("SEND %r %r", record.msg)
+        self.assertEqual((gi, None,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_method_filename, record.pathname)
+        # in Jython, the generator iterator doesn't even have a line number
+        # at this point (it's 0)
+        self.assertEqual(_expected_method_L1 if not _is_jython else 0,
+                record.lineno)
+        self.assertEqual("gm", record.funcName)
+
+    def test_method_throw_log_record(self):
+        obj = Class()
+        gi = obj.gm(2)
+        proxy = _GeneratorIteratorTracingProxy(obj.gm, gi, _class_logger)
+        testex = TestException("test")
+
+        self.assertRaises(TestException, proxy.throw, testex)
+        self.assertEqual(1, len(list_handler.records))
+
+        record = list_handler.records[0]
+        self.assertEqual(_class_logger.name, record.name)
+        self.assertEqual("THROW %r %r", record.msg)
+        self.assertEqual((gi, testex,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_method_filename, record.pathname)
+        # in Jython, the generator iterator doesn't even have a line number
+        # at this point (it's 0)
+        self.assertEqual(_expected_method_L1 if not _is_jython else 0,
+                record.lineno)
+        self.assertEqual("gm", record.funcName)
+
+    def test_method_close_log_record(self):
+        obj = Class()
+        gi = obj.gm(2)
+        proxy = _GeneratorIteratorTracingProxy(obj.gm, gi, _class_logger)
+
+        proxy.close()
+        self.assertRaises(StopIteration, next, proxy)
+        self.assertEqual(2, len(list_handler.records)) # CLOSE, STOP
+
+        record = list_handler.records[0]
+        self.assertEqual(_class_logger.name, record.name)
+        self.assertEqual("CLOSE %r", record.msg)
+        self.assertEqual((gi,), record.args)
+        self.assertEqual("TRACE", record.levelname)
+        self.assertEqual(TRACE, record.levelno)
+        self.assertEqual(_expected_method_filename, record.pathname)
+        # in Jython, the generator iterator doesn't even have a line number
+        # at this point (it's 0)
+        self.assertEqual(_expected_method_L1 if not _is_jython else 0,
+                record.lineno)
+        self.assertEqual("gm", record.funcName)
 
 
 def suite():
