@@ -28,7 +28,7 @@
 
 """
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 import unittest
 import warnings

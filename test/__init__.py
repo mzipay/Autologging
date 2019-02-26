@@ -25,7 +25,7 @@
 
 """Utilities for Autologging unit and functional tests."""
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 from functools import partial
 import logging

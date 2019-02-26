@@ -41,32 +41,9 @@ without affecting your application logging.
 **Python 2.7 and Python 3.4+ are supported using the same codebase.**
 All examples given on this site use Python 3 syntax.
 
-.. versionadded:: 1.0.1
-   Autologging is now officially tested and working under `Jython
-   <http://www.jython.org/>`_, `IronPython <http://ironpython.net/>`_,
-   `PyPy <http://pypy.org/>`_, and `Stackless Python
-   <https://bitbucket.org/stackless-dev/stackless/wiki/Home>`_.
-
 Autologging exposes two decorators (:func:`autologging.logged`,
 :func:`autologging.traced`) and a custom log level
 (:attr:`autologging.TRACE`).
-
-.. versionadded:: 1.1.0
-   Autologging now exposes the :func:`autologging.install_traced_noop`
-   function. This function **replaces** the ``traced`` decorator with a
-   no-op that returns traced classes and functions unmodified
-   (effectively disabling all tracing capabilities). This is useful for
-   cases where *any* overhead from tracing is not desired (for example,
-   when running in production environments, or when running performance
-   tests).
-
-.. versionadded:: 1.2.0
-   `Generator iterators
-   <https://docs.python.org/3/glossary.html#term-generator-iterator>`_
-   now emit YIELD/STOP trace logging records
-   (in addition to the CALL/RETURN tracing of the `generator
-   <https://docs.python.org/3/glossary.html#term-generator>`_ function
-   itself).
 
 A brief example::
 
@@ -97,17 +74,47 @@ A brief example::
 
 Logging and tracing output::
 
-   $ python example.py
+   $ python example.py 
    TRACE:example.py,10:__main__.Example.__init__:CALL *() **{}
    INFO:example.py,11:__main__.Example.__init__:initialized
-   TRACE:example.py,11:__main__.Example.__init__:RETURN None
+   TRACE:example.py,10:__main__.Example.__init__:RETURN None
    TRACE:example.py,13:__main__.Example.backwards:CALL *('spam', 'eggs') **{}
-   TRACE:example.py,15:__main__.Example.backwards:RETURN <generator object Example.backwards at 0x7f298a450de0>
-   TRACE:example.py,15:__main__.Example.backwards:YIELD 'maps'
+   TRACE:example.py,13:__main__.Example.backwards:RETURN <generator object backwards at 0x7f50bdaf16e0>
+   TRACE:example.py,15:__main__.Example.backwards:YIELD <generator object backwards at 0x7f50bdaf16e0> 'maps'
    maps
-   TRACE:example.py,15:__main__.Example.backwards:YIELD 'sgge'
+   TRACE:example.py,15:__main__.Example.backwards:YIELD <generator object backwards at 0x7f50bdaf16e0> 'sgge'
    sgge
-   TRACE:example.py,15:__main__.Example.backwards:STOP
+   TRACE:example.py,13:__main__.Example.backwards:STOP <generator object backwards at 0x7f50bdaf16e0>
+
+.. versionadded:: 1.0.1
+   Autologging is now officially tested and working under `Jython
+   <http://www.jython.org/>`_, `IronPython <http://ironpython.net/>`_,
+   `PyPy <http://pypy.org/>`_, and `Stackless Python
+   <https://bitbucket.org/stackless-dev/stackless/wiki/Home>`_.
+
+.. versionadded:: 1.1.0
+   Autologging now exposes the :func:`autologging.install_traced_noop`
+   function. This function **replaces** the ``traced`` decorator with a
+   no-op that returns traced classes and functions unmodified
+   (effectively disabling all tracing capabilities). This is useful for
+   cases where *any* overhead from tracing is not desired (for example,
+   when running in production environments, or when running performance
+   tests).
+
+.. versionadded:: 1.2.0
+   `Generator iterators
+   <https://docs.python.org/3/glossary.html#term-generator-iterator>`_
+   now emit YIELD/STOP trace logging records
+   (in addition to the CALL/RETURN tracing of the `generator
+   <https://docs.python.org/3/glossary.html#term-generator>`_ function
+   itself).
+
+.. versionadded:: 1.3.2
+   Full tracing of generator iterators is now implemented. Autologging
+   emits YIELD, SEND, THROW, CLOSE and STOP trace logging records as
+   appropriate. Additionally, the :func:`repr` of the generator iterator
+   is now included in each log record for easier identification (can be
+   compared to the generator function's RETURN log record).
 
 Table of Contents
 -----------------
@@ -129,7 +136,7 @@ The easiest way to install Autologging is to use `pip
 
    $ pip install Autologging
 
-To install from source, clone or fork the repository::
+To install from source, clone the GitHub repository::
 
    $ git clone https://github.com/mzipay/Autologging.git
 

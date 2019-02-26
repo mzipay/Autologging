@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2015, 2016, 2018 Matthew Zipay.
+# Copyright (c) 2013, 2015, 2016, 2018, 2019 Matthew Zipay.
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation
@@ -28,7 +28,7 @@
 
 """
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 import logging
 import unittest

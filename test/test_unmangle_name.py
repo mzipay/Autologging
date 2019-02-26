@@ -25,7 +25,7 @@
 
 """Test case and runner for :func:`autologging._unmangle_name`."""
 
-__author__ = "Matthew Zipay <mattz@ninthtest.info>"
+__author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 import unittest
 

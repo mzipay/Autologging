@@ -57,18 +57,18 @@ Logging and tracing "by hand"
 
    class MyClass:
 
-      __log = logging.getLogger("{}.MyClass".format(__name__))
+      __log = logging.getLogger(f"{__name__}.MyClass")
 
       def my_method(self, arg, keyword=None):
-         self.__log.log(TRACE, "CALL %r keyword=%r", arg, keyword)
+         self.__log.log(1, "CALL %r keyword=%r", arg, keyword)
          self.__log.info("my message")
-         phrase = "%s and %s" % (arg, keyword)
-         self.__log.log(TRACE, "RETURN %r", phrase)
+         phrase = f"{arg} and {keyword}"
+         self.__log.log(1, "RETURN %r", phrase)
          return phrase
 
 Assuming we've already configured logging to use the format
-*"%(levelname)s:%(name)s:%(funcName)s:%(message)s"*, calling "my_method"
-produces the following log output::
+*"%(levelname)s:%(name)s:%(funcName)s:%(message)s"*, calling
+``my_method('spam', keyword='eggs')`` produces the following log output::
 
    TRACE:my_module.MyClass:my_method:CALL 'spam' keyword='eggs'
    INFO:my_module.MyClass:my_method:my message
@@ -83,7 +83,7 @@ Using this approach, we end up with several lines of visual clutter:
   set the return value as an intermediate local variable so that it can
   be traced, then returned.
   This means we can't simply use the much more succinct expression
-  ``return "%s and %s" % (arg, keyword)``.
+  ``return f"{arg} and {keyword}"``.
 
 Aside from visual clutter, there are maintenance issues as well:
 
@@ -114,7 +114,7 @@ in less code that's more readable and easier to maintain::
 
       def my_method(self, arg, keyword=None):
          self.__log.info("my message")
-         return "%s and %s" % (arg, keyword)
+         return f"{arg} and {keyword}"
 
 The method is now much easier to follow visually, requires zero logging
 or tracing "maintenance," and produces log output that is semantically

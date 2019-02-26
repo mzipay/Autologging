@@ -27,10 +27,20 @@ Autologging installs a **replacement** function for any traced class
 method or function. That replacement function is responsible for the
 steps described above.
 
+Additionally, if a traced function/method is a `generator
+<https://docs.python.org/3/glossary.html#term-generator>`_ function,
+Autologging wraps the returned generator iterator in a "proxy"
+generator iterator that intercepts and logs (at :attr:`autologging.TRACE`
+level) yielded values, ``StopIteration``, and any calls to the generator
+iterator's ``send()``, ``throw()`` or ``close()`` methods.
+
 .. note::
    If the ``TRACE`` level is disabled for the tracing logger when a
    traced function is called, the replacement function delegates
    directly to the original function.
+
+   One important consquence is that a generator function's returned
+   generator iterator will **not** be proxied in this case.
 
 .. rubric:: Which functions are traced?
 
