@@ -6,6 +6,8 @@
 *.class
 *.sh
 *.bat
+*.bat~
+*.un~
 __pycache__/
 Autologging.egg-info/
 MANIFEST
