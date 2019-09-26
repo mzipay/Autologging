@@ -1191,7 +1191,7 @@ class _FunctionTracingProxy(object):
             "CALL *%r **%r",     # msg
             (args, keywords),    # args
             None,                # exc_info
-            func=function.__name__))
+            func=repr(function)))
 
         value = function(*args, **keywords)
 
@@ -1203,7 +1203,7 @@ class _FunctionTracingProxy(object):
             "RETURN %r",         # msg
             (value,),            # args
             None,                # exc_info
-            func=function.__name__))
+            func=repr(function)))
 
         return (_GeneratorIteratorTracingProxy(function, value, self._logger)
                 if isgenerator(value) else value)
