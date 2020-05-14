@@ -34,6 +34,7 @@ import platform
 import sys
 from types import FunctionType
 import warnings
+from autoformatting import JsonFormatter
 
 # BEGIN Jython/IronPython detection
 # (this needs to be implemented consistently w/r/t Aglyph's aglyph._compat)
@@ -67,13 +68,18 @@ TRACE = 1
 logging.addLevelName(TRACE, "TRACE")
 
 
-def logged(obj):
+def logged(*args, **kwargs):
     """Add a logger member to a decorated class or function.
 
     :arg obj:
        the class or function object being decorated, or an optional
        :class:`logging.Logger` object to be used as the parent logger
        (instead of the default module-named logger)
+    :keyword str level: logging level. 
+	:keyword str formatter:
+		logging formatter (text or json). If json, JsonFormatter will be used 
+		within all handlers. All other keyword arguments will be added to 
+		json output rows as extra fields.
     :return:
        *obj* if *obj* is a class or function; otherwise, if *obj* is a
        logger, return a lambda decorator that will in turn set the
@@ -216,13 +222,13 @@ def logged(obj):
        log records emitted when running under IronPython.
 
     """
-    if isinstance(obj, logging.Logger): # `@logged(logger)'
-        return lambda class_or_fn: _add_logger_to(
-            class_or_fn,
-            logger_name=_generate_logger_name(
-                class_or_fn, parent_name=obj.name))
-    else: # `@logged'
-        return _add_logger_to(obj)
+    obj = args[0] if args else None
+    if obj is None:
+        return lambda class_or_fn: _add_logger_to(class_or_fn, logger_name=None, **kwargs)
+    if isinstance(obj, logging.Logger):  # `@logged(logger)'
+        return lambda class_or_fn: _add_logger_to(class_or_fn, logger_name=obj.name, **kwargs)
+    else:  # `@logged'
+        return _add_logger_to(obj, **kwargs)
 
 
 def traced(*args, **keywords):
@@ -739,26 +745,49 @@ def _generate_logger_name(obj, parent_name=None):
         if isclass(obj) else parent_logger_name
 
 
-def _add_logger_to(obj, logger_name=None):
+def _add_logger_to(obj, logger_name=None, level=None, handlers=[], formatter="text", **kwargs):
     """Set a :class:`logging.Logger` member on *obj*.
 
     :arg obj: a class or function object
     :keyword str logger_name: the name (channel) of the logger for *obj*
+    :keyword str formatter:
+        logging formatter (text or json), if json JsonFormatter will be used 
+        within all handlers. All other keyword arguments will be added to 
+        json output rows as extra fields.
     :return: *obj*
 
     If *obj* is a class, the member will be named "__log". If *obj* is a
     function, the member will be named "_log".
 
     """
-    logger = logging.getLogger(
-        logger_name if logger_name else _generate_logger_name(obj))
+    if logger_name == "root":
+        logger = logging.getLogger()
+    else:
+        logger = logging.getLogger(logger_name if logger_name else _generate_logger_name(obj))
+
+    if level:
+        logger.setLevel(level)
+
+    for hdl in handlers:
+        logger.addHandler(hdl)
+
+    # Check logger has at lest 1 handler
+    if len(logger.handlers) == 0:
+        hdl = logging.StreamHandler()
+        hdl.setLevel(logger.getEffectiveLevel())
+        logger.addHandler(hdl)
+
+    if formatter == "json":
+        for handler in logger.handlers:
+            handler.setFormatter(JsonFormatter(**kwargs))
 
     if isclass(obj):
         setattr(obj, _mangle_name("__log", obj.__name__), logger)
-    else: # function
+    else:  # function
         obj._log = logger
 
     return obj
+
 
 
 def _make_traceable_function(function, logger):

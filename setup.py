@@ -15,7 +15,7 @@ setup(
     author_email="mattz@ninthtest.info",
     url="http://ninthtest.info/python-autologging/",
     download_url = "https://sourceforge.net/projects/autologging/files/",
-    py_modules=["autologging"],
+    package_dir={'': 'src'},
     test_suite="test.suite",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

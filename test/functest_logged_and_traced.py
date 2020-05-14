@@ -110,7 +110,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         qualname = getattr(
             LoggedAndTracedClass.NestedClass, "__qualname__", "NestedClass")
         expected_tracer_name = "test.dummy.%s" % qualname
-        expected_logger_name = "logged.testing.%s" % qualname
+        expected_logger_name = "logged.testing"
         self._assert_call_record(
             list_handler.records[0], wrapped_function, expected_tracer_name,
             (("test",), dict()), "LATC.NC.__c__")
@@ -150,7 +150,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         qualname = getattr(
             LoggedAndTracedClass.NestedClass, "__qualname__", "NestedClass")
         expected_tracer_name = "test.dummy.%s" % qualname
-        expected_logger_name = "logged.testing.%s" % qualname
+        expected_logger_name = "logged.testing"
         self._assert_call_record(
             list_handler.records[0], wrapped_function, expected_tracer_name,
             (tuple(), dict()), "LATC.NC.__i__")
@@ -191,10 +191,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         init_function = (
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.
                 __dict__["__init__"])
-        expected_logger_name = "logged.testing.%s" % getattr(
-            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass,
-            "__qualname__",
-            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
+        expected_logger_name = "logged.testing"
         self._assert_log_record(
             list_handler.records[0], init_function, expected_logger_name,
             "LATC.__INC.__i__")
@@ -214,7 +211,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
             "__qualname__",
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
         expected_tracer_name = "traced.testing.%s" % qualname
-        expected_logger_name = "logged.testing.%s" % qualname
+        expected_logger_name = "logged.testing"
         self._assert_call_record(
             list_handler.records[1], wrapped_function, expected_tracer_name,
             ((None,), dict()), "LATC.__INC.m")
@@ -236,10 +233,7 @@ class LoggedAndTracedClassFunctionalTest(_LoggedAndTracedFunctionalTest):
         wrapped_function = (
             LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.
                 __dict__["method"].__wrapped__)
-        expected_logger_name = "logged.testing.%s" % getattr(
-            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass,
-            "__qualname__",
-            LoggedAndTracedClass._LoggedAndTracedClass__InternalNestedClass.__name__)
+        expected_logger_name = "logged.testing"
         self._assert_log_record(
             list_handler.records[1], wrapped_function, expected_logger_name,
             "LATC.__INC.m")

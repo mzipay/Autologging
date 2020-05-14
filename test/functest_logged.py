@@ -121,9 +121,7 @@ class LoggedClassFunctionalTest(_LoggedFunctionalTest):
 
         self.assertEqual(1, len(list_handler.records))
 
-        expected_logger_name = "logged.testing.%s" % getattr(
-            LoggedClass._LoggedClass__InternalNestedClass, "__qualname__",
-            LoggedClass._LoggedClass__InternalNestedClass.__name__)
+        expected_logger_name = "logged.testing"
         self._assert_log_record(
             list_handler.records[0],
             LoggedClass._LoggedClass__InternalNestedClass.__dict__["__init__"],
