@@ -779,6 +779,7 @@ def _add_logger_to(obj, logger_name=None, level=None, handlers=[], formatter="te
 
     if formatter == "json":
         for handler in logger.handlers:
+            kwargs['logname'] = logger.name
             handler.setFormatter(JsonFormatter(**kwargs))
 
     if isclass(obj):
