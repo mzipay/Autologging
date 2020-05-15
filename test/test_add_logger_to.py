@@ -66,7 +66,7 @@ class AddLoggerToTest(unittest.TestCase):
     def test_add_default_logger_to_function(self):
         self.assertFalse(hasattr(sample_function, "_log"))
         _add_logger_to(sample_function)
-        self.assertEqual(__name__, sample_function._log.name)
+        self.assertEqual('test.test_add_logger_to.sample_function', sample_function._log.name)
 
     def test_add_named_logger_to_function(self):
         self.assertFalse(hasattr(sample_function, "_log"))

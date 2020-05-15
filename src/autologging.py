@@ -620,11 +620,18 @@ def traced(*args, **keywords):
         return traced
 
     if isclass(obj): # `@traced' class
-        return _install_traceable_methods(obj,
+        if hasattr(obj, _mangle_name("__log", obj.__name__)):
+            return _install_traceable_methods(obj, logger=obj.__log,
                 exclude=keywords.get("exclude", False))
+        else:
+            return _install_traceable_methods(obj,
+                    exclude=keywords.get("exclude", False))
     elif isroutine(obj): # `@traced' function
-        return _make_traceable_function(
-            obj, logging.getLogger(_generate_logger_name(obj)))
+        if hasattr(obj, "_log"):
+            return _make_traceable_function(obj, logger=obj._log)
+        else:
+            return _make_traceable_function(
+                obj, logging.getLogger(_generate_logger_name(obj)))
     elif isinstance(obj, logging.Logger):
         # may be decorating a class OR a function
         method_names = args[1:]
@@ -741,8 +748,7 @@ def _generate_logger_name(obj, parent_name=None):
     """
     parent_logger_name = parent_name if parent_name else obj.__module__
     return "%s.%s" % (
-            parent_logger_name, getattr(obj, "__qualname__", obj.__name__)) \
-        if isclass(obj) else parent_logger_name
+            parent_logger_name, getattr(obj, "__qualname__", obj.__name__))
 
 
 def _add_logger_to(obj, logger_name=None, level=None, handlers=[], formatter="text", **kwargs):
@@ -779,7 +785,7 @@ def _add_logger_to(obj, logger_name=None, level=None, handlers=[], formatter="te
 
     if formatter == "json":
         for handler in logger.handlers:
-            kwargs['logname'] = logger.name
+            kwargs['logname'] = kwargs.get('logname', logger.name)
             handler.setFormatter(JsonFormatter(**kwargs))
 
     if isclass(obj):

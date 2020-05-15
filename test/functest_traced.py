@@ -230,10 +230,10 @@ class TracedFunctionFunctionalTest(_TracedFunctionalTest):
 
         self.assertEqual(2, len(list_handler.records))
         self._assert_call_record(
-            list_handler.records[0], traced_function.__wrapped__, "test.dummy",
+            list_handler.records[0], traced_function.__wrapped__, "test.dummy.traced_function",
             ((None,), dict()), "t_f")
         self._assert_return_record(
-            list_handler.records[1], traced_function.__wrapped__, "test.dummy",
+            list_handler.records[1], traced_function.__wrapped__, "test.dummy.traced_function",
             (nested_function,), "t_f")
 
     def test_no_traced_function_tracing_log_records_when_trace_disabled(self):

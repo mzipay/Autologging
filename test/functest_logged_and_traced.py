@@ -278,7 +278,7 @@ class LoggedAndTracedFunctionFunctionalTest(_LoggedAndTracedFunctionalTest):
             list_handler.records[0], wrapped_function, "traced.testing",
             ((None,), dict()), "l_a_t_f")
         self._assert_log_record(
-            list_handler.records[1], wrapped_function, "test.dummy", "l_a_t_f")
+            list_handler.records[1], wrapped_function, "test.dummy.logged_and_traced_function", "l_a_t_f")
         self._assert_return_record(
             list_handler.records[2], wrapped_function, "traced.testing",
             (nested_function,), "l_a_t_f")
@@ -291,7 +291,7 @@ class LoggedAndTracedFunctionFunctionalTest(_LoggedAndTracedFunctionalTest):
 
         wrapped_function = logged_and_traced_function.__wrapped__
         self._assert_log_record(
-            list_handler.records[0], wrapped_function, "test.dummy", "l_a_t_f")
+            list_handler.records[0], wrapped_function, "test.dummy.logged_and_traced_function", "l_a_t_f")
 
     def test_function_trace_records_when_log_disabled(self):
         dummy_module_logger.setLevel(logging.WARN)
@@ -316,13 +316,13 @@ class LoggedAndTracedFunctionFunctionalTest(_LoggedAndTracedFunctionalTest):
 
         wrapped_function = nested_function.__wrapped__
         self._assert_call_record(
-            list_handler.records[3], wrapped_function, "test.dummy",
+            list_handler.records[3], wrapped_function, "logged.testing",
             ((None,), dict()), "l_a_t_f.n_t_a_l_f")
         self._assert_log_record(
             list_handler.records[4], wrapped_function, "logged.testing",
             "l_a_t_f.n_t_a_l_f")
         self._assert_return_record(
-            list_handler.records[5], wrapped_function, "test.dummy",
+            list_handler.records[5], wrapped_function, "logged.testing",
             ("l_a_t_f.n_t_a_l_f None and None",), "l_a_t_f.n_t_a_l_f")
 
     def test_nested_function_log_record_when_trace_disabled(self):
@@ -331,11 +331,11 @@ class LoggedAndTracedFunctionFunctionalTest(_LoggedAndTracedFunctionalTest):
         value = nested_function(None)
 
         self.assertEqual("l_a_t_f.n_t_a_l_f None and None", value)
-        self.assertEqual(4, len(list_handler.records))
+        self.assertEqual(6, len(list_handler.records))
 
         wrapped_function = nested_function.__wrapped__
         self._assert_log_record(
-            list_handler.records[3], wrapped_function, "logged.testing",
+            list_handler.records[4], wrapped_function, "logged.testing",
             "l_a_t_f.n_t_a_l_f")
 
     def test_nested_function_trace_records_when_log_disabled(self):
@@ -344,15 +344,7 @@ class LoggedAndTracedFunctionFunctionalTest(_LoggedAndTracedFunctionalTest):
         value = nested_function(None)
 
         self.assertEqual("l_a_t_f.n_t_a_l_f None and None", value)
-        self.assertEqual(5, len(list_handler.records))
-
-        wrapped_function = nested_function.__wrapped__
-        self._assert_call_record(
-            list_handler.records[3], wrapped_function, "test.dummy",
-            ((None,), dict()), "l_a_t_f.n_t_a_l_f")
-        self._assert_return_record(
-            list_handler.records[4], wrapped_function, "test.dummy",
-            ("l_a_t_f.n_t_a_l_f None and None",), "l_a_t_f.n_t_a_l_f")
+        self.assertEqual(3, len(list_handler.records))
 
 
 def suite():

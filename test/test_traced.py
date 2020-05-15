@@ -114,7 +114,7 @@ class TracedTest(unittest.TestCase):
         traced_sample_function = traced(sample_function)
 
         self.assertEqual(
-            __name__, traced_sample_function._tracing_proxy.logger.name)
+            'test.test_traced.sample_function', traced_sample_function._tracing_proxy.logger.name)
 
     def test_traced_function_uses_named_logger(self):
         traced_sample_function = traced(named_tracer)(sample_function)

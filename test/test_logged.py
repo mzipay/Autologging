@@ -75,7 +75,7 @@ class LoggedTest(unittest.TestCase):
     def test_logged_function_uses_default_logger(self):
         logged(sample_function)
 
-        self.assertEqual(__name__, sample_function._log.name)
+        self.assertEqual('test.test_logged.sample_function', sample_function._log.name)
 
     def test_logged_class_uses_named_logger(self):
         logged(named_logger)(sample_function)

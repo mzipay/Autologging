@@ -29,6 +29,8 @@ __author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 
 import sys
 
+import logging
+
 from autologging import logged, traced, __version__
 
 from test import named_logger, named_tracer
@@ -41,6 +43,10 @@ def logged_function():
         nested_function._log.info("l_f.n_f message")
     logged_function._log.info("l_f message")
     return nested_function
+
+@logged(level="ERROR", format='json')
+def logged_function_json():
+    logged_function_json._log.error("l_f_j message")
 
 
 @logged

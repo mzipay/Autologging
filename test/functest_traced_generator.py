@@ -166,19 +166,19 @@ class TracedGeneratorFunctionalTest(_TracedGeneratorFunctionalTest):
 
         self._assert_call_record(
             list_handler.records[0], traced_generator.__wrapped__,
-            "test.dummy", (("MZ",), dict()), "t_g")
+            "test.dummy.traced_generator", (("MZ",), dict()), "t_g")
         self._assert_return_record(
             list_handler.records[1], traced_generator.__wrapped__,
-            "test.dummy", (geniter.__wrapped__,), "t_g")
+            "test.dummy.traced_generator", (geniter.__wrapped__,), "t_g")
         self._assert_yield_record(
             list_handler.records[2], traced_generator.__wrapped__,
-            "test.dummy", (geniter.__wrapped__, 'Z',), "t_g")
+            "test.dummy.traced_generator", (geniter.__wrapped__, 'Z',), "t_g")
         self._assert_yield_record(
             list_handler.records[3], traced_generator.__wrapped__,
-            "test.dummy", (geniter.__wrapped__, 'M',), "t_g")
+            "test.dummy.traced_generator", (geniter.__wrapped__, 'M',), "t_g")
         self._assert_stop_record(
             list_handler.records[4], traced_generator.__wrapped__,
-            "test.dummy", (geniter.__wrapped__,), "t_g")
+            "test.dummy.traced_generator", (geniter.__wrapped__,), "t_g")
 
 
 def suite():

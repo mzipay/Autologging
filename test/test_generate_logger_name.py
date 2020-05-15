@@ -54,11 +54,11 @@ class GenerateLoggerNameTest(unittest.TestCase):
             _generate_logger_name(SampleClass, parent_name = "my.channel"))
 
     def test_default_name_for_function(self):
-        self.assertEqual(__name__, _generate_logger_name(sample_function))
+        self.assertEqual('test.test_generate_logger_name.sample_function', _generate_logger_name(sample_function))
 
     def test_explicit_name_for_function(self):
         self.assertEqual(
-            "my.channel",
+            "my.channel.sample_function",
             _generate_logger_name(sample_function, parent_name = "my.channel"))
 
 

@@ -41,7 +41,7 @@ from test import (
     list_handler,
     named_logger,
 )
-from test.dummy import LoggedClass, logged_function
+from test.dummy import LoggedClass, logged_function, logged_function_json
 
 # suppress messages to the console
 logging.getLogger().setLevel(logging.FATAL + 1)
@@ -55,13 +55,13 @@ class _LoggedFunctionalTest(unittest.TestCase):
         list_handler.reset()
 
     def _assert_log_record(
-            self, info_record, logged_function, expected_logger_name, marker):
+            self, info_record, logged_function, expected_logger_name, marker, expected_levelname='INFO', expected_levelno=logging.INFO):
         expected_message = "%s message" % marker
         self.assertEqual(expected_logger_name, info_record.name)
         self.assertEqual(expected_message, info_record.msg)
         self.assertEqual(tuple(), info_record.args)
-        self.assertEqual("INFO", info_record.levelname)
-        self.assertEqual(logging.INFO, info_record.levelno)
+        self.assertEqual(expected_levelname, info_record.levelname)
+        self.assertEqual(expected_levelno, info_record.levelno)
         # IronPython doesn't handle frames or code objects fully (even with
         # -X:FullFrames)
         if not _is_ironpython:
@@ -139,7 +139,7 @@ class LoggedFunctionFunctionalTest(_LoggedFunctionalTest):
 
         self.assertEqual(1, len(list_handler.records))
         self._assert_log_record(
-            list_handler.records[0], logged_function, "test.dummy", "l_f")
+            list_handler.records[0], logged_function, "test.dummy.logged_function", "l_f")
 
     def test_nested_function_log_record(self):
         nested_function = logged_function()
@@ -149,6 +149,13 @@ class LoggedFunctionFunctionalTest(_LoggedFunctionalTest):
         self._assert_log_record(
             list_handler.records[1], nested_function, "logged.testing",
             "l_f.n_f")
+    
+    def test_function_json_log_record(self):
+        logged_function_json()
+        self.assertEqual(1, len(list_handler.records))
+        self.assertEqual(logging.ERROR, logged_function_json._log.level)
+        self._assert_log_record(
+            list_handler.records[0], logged_function_json, "test.dummy.logged_function_json", "l_f_j", 'ERROR', logging.ERROR)
 
 
 def suite():
