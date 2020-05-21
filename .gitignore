@@ -16,6 +16,8 @@ dist/
 doc/build/
 doc/bootswatch/
 autologging-*-env/
+.vscode/
 NOTES.txt
 runtestsuite.py
+
 
