@@ -35,7 +35,7 @@ import sys
 from types import FunctionType
 import warnings
 
-# BEGIN Jython/IronPython detection
+# BEGIN implementation detection
 # (this needs to be implemented consistently w/r/t Aglyph's aglyph._compat)
 try:
     _py_impl = platform.python_implementation()
@@ -52,8 +52,19 @@ try:
 except:
     _has_clr = False
 
-_is_ironpython = _py_impl == "IronPython" and _has_clr
-# END Jython/IronPython detection
+_is_ironpy2 = _py_impl == "IronPython" and _has_clr and sys.version_info[0] == 2
+_is_ironpy3 = _py_impl == "IronPython" and _has_clr and sys.version_info[0] == 3
+_is_ironpython = _is_ironpy2 or _is_ironpy3
+
+try:
+    import java
+    java.type('java.lang.String')
+    _has_java_module = True
+except:
+    _has_java_module = False
+
+_is_graalpy = _py_impl == 'GraalVM' and _has_java_module
+# END implementation detection
 
 __all__ = [
     "TRACE",
@@ -1256,7 +1267,7 @@ class _GeneratorIteratorTracingProxy(object):
         # NOTE: IronPython does not track gi_frame.f_lineno correctly (always
         #       reported as 1).
         return (getattr(self._giter.gi_frame, "f_lineno", self._gfunc_lineno)
-                if not _is_ironpython else self._gfunc_lineno)
+                if not _is_ironpy2 else self._gfunc_lineno)
 
     def __iter__(self):
         """Return a self-reference.

@@ -35,10 +35,11 @@ import logging
 import unittest
 
 from autologging import (
-    _is_jython,
-    _is_ironpython,
-    TRACE,
     _GeneratorIteratorTracingProxy,
+    _is_graalpy,
+    _is_ironpy2,
+    _is_jython,
+    TRACE,
     __version__,
 )
 
@@ -59,7 +60,7 @@ _expected_function_filename = gf.__code__.co_filename
 _expected_function_L1 = get_lineno(_expected_function_filename, "#gf:L1")
 _expected_function_LY = (
         get_lineno(_expected_function_filename, "#gf:LY")
-        if not _is_ironpython else _expected_function_L1)
+        if not _is_ironpy2 else _expected_function_L1)
 _expected_function_LS = (
         _expected_function_L1
         if not _is_jython else (_expected_function_LY - 1))
@@ -79,7 +80,7 @@ _expected_method_filename = _method.__code__.co_filename
 _expected_method_L1 = get_lineno(_expected_method_filename, "#C.gm:L1")
 _expected_method_LY = (
         get_lineno(_expected_method_filename, "#C.gm:LY")
-        if not _is_ironpython else _expected_method_L1)
+        if not _is_ironpy2 else _expected_method_L1)
 _expected_method_LS = (
         _expected_method_L1
         if not _is_jython else (_expected_method_LY - 1))
@@ -161,6 +162,11 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual(_expected_function_LS, record.lineno)
         self.assertEqual("gf", record.funcName)
 
+    # Jython and GraalPy behave inconsistently w/r/t all other implementations
+    # (Jython reports lineno 0; GraalPy reports lineno -1)
+    @unittest.skipIf(_is_jython or _is_graalpy,
+                     'Jython and GraalPy are unable to report lineno for '
+                     'generator iterators')
     def test_function_send_log_record(self):
         gi = gf(2)
         proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
@@ -176,12 +182,14 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", record.levelname)
         self.assertEqual(TRACE, record.levelno)
         self.assertEqual(_expected_function_filename, record.pathname)
-        # in Jython, the generator iterator doesn't even have a line number
-        # at this point (it's 0)
-        self.assertEqual(_expected_function_L1 if not _is_jython else 0,
-                record.lineno)
+        self.assertEqual(_expected_function_L1, record.lineno)
         self.assertEqual("gf", record.funcName)
 
+    # Jython and GraalPy behave inconsistently w/r/t all other implementations
+    # (Jython reports lineno 0; GraalPy reports lineno -1)
+    @unittest.skipIf(_is_jython or _is_graalpy,
+                     'Jython and GraalPy are unable to report lineno for '
+                     'generator iterators')
     def test_function_throw_log_record(self):
         gi = gf(2)
         proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
@@ -197,12 +205,14 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", record.levelname)
         self.assertEqual(TRACE, record.levelno)
         self.assertEqual(_expected_function_filename, record.pathname)
-        # in Jython, the generator iterator doesn't even have a line number
-        # at this point (it's 0)
-        self.assertEqual(_expected_function_L1 if not _is_jython else 0,
-                record.lineno)
+        self.assertEqual(_expected_function_L1, record.lineno)
         self.assertEqual("gf", record.funcName)
 
+    # Jython and GraalPy behave inconsistently w/r/t all other implementations
+    # (Jython reports lineno 0; GraalPy reports lineno -1)
+    @unittest.skipIf(_is_jython or _is_graalpy,
+                     'Jython and GraalPy are unable to report lineno for '
+                     'generator iterators')
     def test_function_close_log_record(self):
         gi = gf(2)
         proxy = _GeneratorIteratorTracingProxy(gf, gi, _module_logger)
@@ -218,10 +228,7 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", record.levelname)
         self.assertEqual(TRACE, record.levelno)
         self.assertEqual(_expected_function_filename, record.pathname)
-        # in Jython, the generator iterator doesn't even have a line number
-        # at this point (it's 0)
-        self.assertEqual(_expected_function_L1 if not _is_jython else 0,
-                record.lineno)
+        self.assertEqual(_expected_function_L1, record.lineno)
         self.assertEqual("gf", record.funcName)
 
     def test_method_yield1_log_record(self):
@@ -281,6 +288,11 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual(_expected_method_LS, record.lineno)
         self.assertEqual("gm", record.funcName)
 
+    # Jython and GraalPy behave inconsistently w/r/t all other implementations
+    # (Jython reports lineno 0; GraalPy reports lineno -1)
+    @unittest.skipIf(_is_jython or _is_graalpy,
+                     'Jython and GraalPy are unable to report lineno for '
+                     'generator iterators')
     def test_method_send_log_record(self):
         obj = Class()
         gi = obj.gm(2)
@@ -297,12 +309,14 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", record.levelname)
         self.assertEqual(TRACE, record.levelno)
         self.assertEqual(_expected_method_filename, record.pathname)
-        # in Jython, the generator iterator doesn't even have a line number
-        # at this point (it's 0)
-        self.assertEqual(_expected_method_L1 if not _is_jython else 0,
-                record.lineno)
+        self.assertEqual(_expected_method_L1, record.lineno)
         self.assertEqual("gm", record.funcName)
 
+    # Jython and GraalPy behave inconsistently w/r/t all other implementations
+    # (Jython reports lineno 0; GraalPy reports lineno -1)
+    @unittest.skipIf(_is_jython or _is_graalpy,
+                     'Jython and GraalPy are unable to report lineno for '
+                     'generator iterators')
     def test_method_throw_log_record(self):
         obj = Class()
         gi = obj.gm(2)
@@ -319,12 +333,14 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", record.levelname)
         self.assertEqual(TRACE, record.levelno)
         self.assertEqual(_expected_method_filename, record.pathname)
-        # in Jython, the generator iterator doesn't even have a line number
-        # at this point (it's 0)
-        self.assertEqual(_expected_method_L1 if not _is_jython else 0,
-                record.lineno)
+        self.assertEqual(_expected_method_L1, record.lineno)
         self.assertEqual("gm", record.funcName)
 
+    # Jython and GraalPy behave inconsistently w/r/t all other implementations
+    # (Jython reports lineno 0; GraalPy reports lineno -1)
+    @unittest.skipIf(_is_jython or _is_graalpy,
+                     'Jython and GraalPy are unable to report lineno for '
+                     'generator iterators')
     def test_method_close_log_record(self):
         obj = Class()
         gi = obj.gm(2)
@@ -341,10 +357,7 @@ class GeneratorIteratorTracingProxyTest(unittest.TestCase):
         self.assertEqual("TRACE", record.levelname)
         self.assertEqual(TRACE, record.levelno)
         self.assertEqual(_expected_method_filename, record.pathname)
-        # in Jython, the generator iterator doesn't even have a line number
-        # at this point (it's 0)
-        self.assertEqual(_expected_method_L1 if not _is_jython else 0,
-                record.lineno)
+        self.assertEqual(_expected_method_L1, record.lineno)
         self.assertEqual("gm", record.funcName)
 
 

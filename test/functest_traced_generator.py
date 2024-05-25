@@ -36,7 +36,7 @@ __author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 import logging
 import unittest
 
-from autologging import _is_jython, _is_ironpython, TRACE, __version__
+from autologging import _is_jython, _is_ironpy2, TRACE, __version__
 
 from test import (
     dummy_module_logger,
@@ -63,7 +63,7 @@ class _TracedGeneratorFunctionalTest(_TracedFunctionalTest):
         (L1, LY) = self._linenumbers(marker)
         self._assert_trace_record(
             yield_record, traced_generator, expected_logger_name,
-            "YIELD %r %r", expected_args, LY if not _is_ironpython else L1)
+            "YIELD %r %r", expected_args, LY if not _is_ironpy2 else L1)
 
     def _assert_stop_record(
             self, stop_record, traced_generator, expected_logger_name,

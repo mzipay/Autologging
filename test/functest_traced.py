@@ -33,7 +33,7 @@ __author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 import logging
 import unittest
 
-from autologging import TRACE, __version__, _is_ironpython
+from autologging import TRACE, __version__, _is_ironpy2, _is_ironpy3
 
 from test import (
     dummy_module_logger,
@@ -57,10 +57,10 @@ class _TracedFunctionalTest(unittest.TestCase):
     def _assert_call_record(
             self, call_record, traced_function, expected_logger_name,
             expected_args, marker):
+        expected_lineno = get_dummy_lineno("#%s:L1" % marker)
         self._assert_trace_record(
             call_record, traced_function, expected_logger_name,
-            "CALL *%r **%r", expected_args,
-            get_dummy_lineno("#%s:L1" % marker))
+            "CALL *%r **%r", expected_args, expected_lineno)
 
     def _assert_return_record(
             self, return_record, traced_function, expected_logger_name,
@@ -80,7 +80,7 @@ class _TracedFunctionalTest(unittest.TestCase):
         self.assertEqual(TRACE, trace_record.levelno)
         # IronPython doesn't handle frames or code objects fully (even with
         # -X:FullFrames)
-        if not _is_ironpython:
+        if not _is_ironpy2:
             self.assertEqual(
                 traced_function.__code__.co_filename, trace_record.pathname)
             self.assertEqual(expected_lineno, trace_record.lineno)
@@ -161,8 +161,8 @@ class TracedClassFunctionalTest(_TracedFunctionalTest):
         self.assertEqual(0, len(list_handler.records))
 
     @unittest.skipUnless(
-        hasattr(TracedClass.NestedClass, "__qualname__"),
-        "__qualname__ is not available")
+        hasattr(TracedClass.NestedClass, "__qualname__") and not _is_ironpy3,
+        "__qualname__ is unavailable or not implemented correctly")
     def test_nested_classes_have_qualname_logger_name(self):
         self.assertEqual(
             "test.dummy.TracedClass.NestedClass",

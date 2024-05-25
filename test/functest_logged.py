@@ -33,7 +33,7 @@ __author__ = "Matthew Zipay (mattzATninthtestDOTinfo)"
 import logging
 import unittest
 
-from autologging import __version__, _is_ironpython
+from autologging import __version__, _is_ironpy2
 
 from test import (
     dummy_module_logger,
@@ -64,7 +64,7 @@ class _LoggedFunctionalTest(unittest.TestCase):
         self.assertEqual(logging.INFO, info_record.levelno)
         # IronPython doesn't handle frames or code objects fully (even with
         # -X:FullFrames)
-        if not _is_ironpython:
+        if not _is_ironpy2:
             self.assertEqual(
                 logged_function.__code__.co_filename, info_record.pathname)
             self.assertEqual(

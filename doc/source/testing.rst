@@ -2,11 +2,20 @@
 Autologging 1.3.2 testing summary
 =================================
 
+.. _Status of Python versions: https://devguide.python.org/versions/
 .. _CPython: https://www.python.org/
 .. _PyPy: http://pypy.org/
 .. _Stackless Python: https://github.com/stackless-dev/stackless/wiki
 .. _Jython: http://www.jython.org/
 .. _IronPython: http://ironpython.net/
+
+Autologging does not officially support Python versions that have reached EOL
+status (see `Status of Python versions`_).
+
+**However**, Autologging has *already* been successfully tested against many
+EOL versions.  If you are using an EOL Python version and still wish to use
+Autologging, please consult an earlier Autologging testing summary to confirm
+the test suite results.
 
 `CPython`_
 ==========

@@ -42,7 +42,10 @@ import unittest
 try:
     reload
 except NameError:
-    from imp import reload
+    try:
+        from imp import reload
+    except ModuleNotFoundError:
+        from importlib import reload
 
 import autologging
 from autologging import __version__
