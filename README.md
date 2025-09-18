@@ -1,6 +1,6 @@
 # Autologging - easier logging and tracing for Python classes
 
-http://ninthtest.info/python-autologging/
+https://autologging.readthedocs.io/
 
 [![PyPI version](https://img.shields.io/pypi/v/Autologging.svg)](https://pypi.python.org/pypi/Autologging)
 [![Python version](https://img.shields.io/pypi/pyversions/Autologging.svg)](https://pypi.python.org/pypi/Autologging)
@@ -149,4 +149,5 @@ https://sourceforge.net/projects/autologging/files/.
 
 (Use [pip](https://pip.pypa.io/) or
 [wheel](https://pypi.python.org/pypi/wheel) to install the .whl.)
+
 
